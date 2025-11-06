@@ -85,6 +85,12 @@ public sealed class Settings : INotifyPropertyChanged, IDisposable
     public string Format { get; set; } = "{ddd}, {MMM dd}, {h:mm:ss tt}";
 
     /// <summary>
+    /// Enables natural language time format (e.g., "Half past Two", "Noon", "11 o'Clock").
+    /// When enabled, the Format property is ignored for time display.
+    /// </summary>
+    public bool UseNaturalLanguage { get; set; } = false;
+
+    /// <summary>
     /// .NET format string for the countdown mode. If left blank, it will be dynamic.
     /// </summary>
     /// <remarks>

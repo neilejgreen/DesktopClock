@@ -17,6 +17,7 @@ using H.NotifyIcon;
 using H.NotifyIcon.EfficiencyMode;
 using Humanizer;
 using WpfWindowPlacement;
+using static DesktopClock.Utilities.NaturalLanguageTimeFormatter;
 
 namespace DesktopClock;
 
@@ -372,6 +373,11 @@ public partial class MainWindow : Window
 
             if (Settings.Default.CountdownTo == default)
             {
+                if (Settings.Default.UseNaturalLanguage)
+                {
+                    return Format(timeInSelectedZone.DateTime);
+                }
+
                 return Tokenizer.FormatWithTokenizerOrFallBack(timeInSelectedZone, Settings.Default.Format, CultureInfo.DefaultThreadCurrentCulture);
             }
             else

@@ -52,6 +52,12 @@
                     </Hyperlink>
                 </TextBlock>
 
+                <CheckBox Content="Use Natural Language Time Format"
+                          IsChecked="{Binding Settings.UseNaturalLanguage, Mode=TwoWay}" />
+                <TextBlock Text="Displays time in natural language (e.g., 'Half past Two', 'Noon', '11 o'Clock', 'Fourteen minutes past three'). When enabled, the format string above is ignored."
+                           FontStyle="Italic"
+                           Margin="0,0,0,16" />
+
                 <TextBlock Text="Countdown Format:" />
                 <TextBox Text="{Binding Settings.CountdownFormat, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                          AcceptsReturn="True"
