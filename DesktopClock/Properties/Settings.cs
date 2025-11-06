@@ -115,7 +115,52 @@ public sealed class Settings : INotifyPropertyChanged, IDisposable
     /// <summary>
     /// Text color for the clock's text.
     /// </summary>
-    public Color TextColor { get; set; }
+    public Color TextColor
+    {
+        get => _textColor;
+        set
+        {
+            _textColor = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TextColor)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(EffectiveTextColor)));
+        }
+    }
+
+    private Color _textColor;
+
+    /// <summary>
+    /// Automatically adjust text lightness based on background behind the clock.
+    /// </summary>
+    public bool AutoAdjustTextColor { get; set; } = false;
+
+    /// <summary>
+    /// How frequently to check and update text lightness (in seconds).
+    /// </summary>
+    public int AutoColorUpdateInterval { get; set; } = 5;
+
+    /// <summary>
+    /// Override text color used by auto-adjustment feature. When null, uses TextColor.
+    /// This field is not serialized.
+    /// </summary>
+    [JsonIgnore]
+    public Color? OverrideTextColor
+    {
+        get => _overrideTextColor;
+        set
+        {
+            _overrideTextColor = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(EffectiveTextColor)));
+        }
+    }
+
+    private Color? _overrideTextColor;
+
+    /// <summary>
+    /// The actual text color to display. Returns OverrideTextColor if set, otherwise TextColor.
+    /// This property is read-only and computed.
+    /// </summary>
+    [JsonIgnore]
+    public Color EffectiveTextColor => OverrideTextColor ?? TextColor;
 
     /// <summary>
     /// Opacity of the text.
@@ -184,6 +229,7 @@ public sealed class Settings : INotifyPropertyChanged, IDisposable
 
     /// <summary>
     /// Makes the clock ignore mouse clicks (click-through) so underlying windows receive input.
+    /// Also hides the window from Alt+Tab when enabled.
     /// </summary>
     public bool ClickThrough { get; set; } = false;
 

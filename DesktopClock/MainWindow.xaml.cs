@@ -31,6 +31,7 @@ public partial class MainWindow : Window
     private TimeZoneInfo _timeZone;
     private SoundPlayer _soundPlayer;
     private PixelShifter _pixelShifter;
+    private int _autoColorUpdateCounter;
 
     /// <summary>
     /// The current date and time in the selected time zone, or countdown as a formatted string.
@@ -247,6 +248,20 @@ public partial class MainWindow : Window
             case nameof(Settings.Default.ClickThrough):
                 ApplyClickThrough();
                 break;
+
+            case nameof(Settings.Default.AutoAdjustTextColor):
+                // Clear override when auto-adjustment is disabled
+                if (!Settings.Default.AutoAdjustTextColor)
+                {
+                    Settings.Default.OverrideTextColor = null;
+                    _autoColorUpdateCounter = 0; // Reset counter
+                }
+                break;
+
+            case nameof(Settings.Default.TextColor):
+                // Clear override when base text color changes (so new lightness is immediately visible)
+                Settings.Default.OverrideTextColor = null;
+                break;
         }
     }
 
@@ -260,6 +275,8 @@ public partial class MainWindow : Window
         TryShiftPixels();
 
         TryPlaySound();
+
+        TryUpdateTextColor();
     }
 
     /// <summary>
@@ -308,6 +325,43 @@ public partial class MainWindow : Window
             Left += _pixelShifter.ShiftX();
             Top += _pixelShifter.ShiftY();
         });
+    }
+
+    /// <summary>
+    /// Tries to update the text lightness based on the background behind the clock if auto adjustment is enabled.
+    /// </summary>
+    private void TryUpdateTextColor()
+    {
+        if (!Settings.Default.AutoAdjustTextColor)
+            return;
+
+        // Only update at the specified interval to avoid performance issues
+        _autoColorUpdateCounter++;
+        if (_autoColorUpdateCounter < Settings.Default.AutoColorUpdateInterval)
+            return;
+
+        _autoColorUpdateCounter = 0;
+
+        try
+        {
+            // Run color detection on dispatcher to ensure we have window bounds
+            Dispatcher.Invoke(() =>
+            {
+                // Get the average color behind the window
+                var backgroundColor = ScreenColorDetector.GetAverageColorBehindWindow(this);
+
+                // Adjust the current text color to contrast with the background
+                var optimalTextColor = ScreenColorDetector.GetOptimalTextColorWithHue(
+                    Settings.Default.TextColor, backgroundColor);
+
+                // Update the override text color without modifying the saved setting
+                Settings.Default.OverrideTextColor = optimalTextColor;
+            });
+        }
+        catch
+        {
+            // Ignore errors to prevent crashes from screen capture issues
+        }
     }
 
     private void UpdateTimeString()
@@ -466,11 +520,12 @@ public partial class MainWindow : Window
             const int GWL_EXSTYLE = -20;
             const int WS_EX_TRANSPARENT = 0x00000020;
             const int WS_EX_LAYERED = 0x00080000;
+            const int WS_EX_TOOLWINDOW = 0x00000080;
 
             int exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
             int newStyle = Settings.Default.ClickThrough
-                ? exStyle | WS_EX_TRANSPARENT | WS_EX_LAYERED
-                : (exStyle & ~WS_EX_TRANSPARENT) | WS_EX_LAYERED; // keep layered for opacity/visuals
+                ? exStyle | WS_EX_TRANSPARENT | WS_EX_LAYERED | WS_EX_TOOLWINDOW
+                : (exStyle & ~(WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW)) | WS_EX_LAYERED; // keep layered for opacity/visuals
             SetWindowLong(hwnd, GWL_EXSTYLE, newStyle);
         }
         catch

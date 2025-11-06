@@ -151,7 +151,7 @@
 
                 <local:OutlinedTextBlock.Fill>
                     <SolidColorBrush Opacity="{Binding TextOpacity, Source={x:Static p:Settings.Default}, Mode=OneWay}"
-                                     Color="{Binding TextColor, Source={x:Static p:Settings.Default}, Mode=OneWay}" />
+                                     Color="{Binding EffectiveTextColor, Source={x:Static p:Settings.Default}, Mode=OneWay}" />
                 </local:OutlinedTextBlock.Fill>
 
                 <local:OutlinedTextBlock.Style>
