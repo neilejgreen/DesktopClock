@@ -4,9 +4,11 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Media;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Interop;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DesktopClock.Properties;
@@ -241,6 +243,10 @@ public partial class MainWindow : Window
             case nameof(Settings.Default.PlaySoundOnCountdown):
                 UpdateSoundPlayerEnabled();
                 break;
+
+            case nameof(Settings.Default.ClickThrough):
+                ApplyClickThrough();
+                break;
         }
     }
 
@@ -374,8 +380,10 @@ public partial class MainWindow : Window
         }
 
         // Show the window now that it's finished loading.
-        // This was mainly done to stop the StartHidden option from flashing the window briefly.
         Opacity = 1;
+
+        // Make window click-through if enabled.
+        ApplyClickThrough();
     }
 
     private void Window_ContentRendered(object sender, EventArgs e)
@@ -449,4 +457,31 @@ public partial class MainWindow : Window
             }
         }
     }
+
+    private void ApplyClickThrough()
+    {
+        try
+        {
+            var hwnd = new WindowInteropHelper(this).Handle;
+            const int GWL_EXSTYLE = -20;
+            const int WS_EX_TRANSPARENT = 0x00000020;
+            const int WS_EX_LAYERED = 0x00080000;
+
+            int exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+            int newStyle = Settings.Default.ClickThrough
+                ? exStyle | WS_EX_TRANSPARENT | WS_EX_LAYERED
+                : (exStyle & ~WS_EX_TRANSPARENT) | WS_EX_LAYERED; // keep layered for opacity/visuals
+            SetWindowLong(hwnd, GWL_EXSTYLE, newStyle);
+        }
+        catch
+        {
+            // Ignore failures.
+        }
+    }
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 }
