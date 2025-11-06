@@ -41,6 +41,10 @@
                       IsCheckable="True"
                       IsChecked="{Binding Topmost, Source={x:Static p:Settings.Default}, Mode=TwoWay}" />
 
+            <MenuItem Header="Click-_Through"
+                      IsCheckable="True"
+                      IsChecked="{Binding ClickThrough, Source={x:Static p:Settings.Default}, Mode=TwoWay}" />
+
             <MenuItem>
                 <MenuItem.Header>
                     <StackPanel Orientation="Horizontal">
