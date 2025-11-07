@@ -42,12 +42,12 @@ public class NaturalLanguageTimeFormatter(
 
     private string GetTimeString(DateTime dateTime)
     {
-        var hour = dateTime.Hour;
-        var minute = dateTime.Minute;
-        var hourName = GetHourName(hour);
-        var nextHourName = GetHourName(hour + 1);
-        var minutesPast = GetMinuteName(minute);
-        var minutesTo = GetMinuteName(60 - minute);
+        int hour = dateTime.Hour;
+        int minute = dateTime.Minute;
+        string hourName = GetHourName(hour);
+        string nextHourName = GetHourName(hour + 1);
+        string minutesPast = GetMinuteName(minute);
+        string minutesTo = GetMinuteName(60 - minute);
         return (hour, minute) switch
         {
             // noon or midnight
@@ -69,7 +69,7 @@ public class NaturalLanguageTimeFormatter(
             (_, 45) => $"quarter to {nextHourName}",
 
             // Handle %5 to
-            (_, int min) when min % 5 == 0 => $"{minutesTo} to {nextHourName}",
+            (_, > 30) when minute % 5 == 0 => $"{minutesTo} to {nextHourName}",
 
             // Handle small minutes to
             (_, > 55) => $"{minutesTo} minutes to {nextHourName}",
@@ -92,7 +92,7 @@ public class NaturalLanguageTimeFormatter(
     private static string GetMinuteName(int minute) => minute switch
     {
         // Handle out of range first
-        < 0 or > 59 => throw new ArgumentOutOfRangeException(nameof(minute), minute, "Minute must be between 0 and 59"),
+        < 0 or > 60 => throw new ArgumentOutOfRangeException(nameof(minute), minute, "Minute must be between 0 and 59"),
 
         // Handle simple cases (0-19) directly from array
         < 20 => MinuteNames[minute],
@@ -112,6 +112,7 @@ public class NaturalLanguageTimeFormatter(
             3 => "thirty",
             4 => "forty",
             5 => "fifty",
+            6 => "sixty",
             _ => throw new ArgumentOutOfRangeException(nameof(minute), $"Unexpected tens value: {tens}")
         };
 
