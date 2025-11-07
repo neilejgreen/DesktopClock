@@ -3,23 +3,23 @@ using System;
 namespace DesktopClock.Utilities;
 
 /// <summary>
-/// Converts DateTime to natural language time format (e.g., "Half past Two", "Noon", "11 o'Clock").
+/// Converts DateTime to natural language time format (e.g., "Half past two", "Noon", "Eleven o'clock").
 /// </summary>
 public static class NaturalLanguageTimeFormatter
 {
     private static readonly string[] HourNames = new[]
     {
-        "Twelve", "One", "Two", "Three", "Four", "Five", "Six",
-        "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve"
+        "twelve", "one", "two", "three", "four", "five", "six",
+        "seven", "eight", "nine", "ten", "eleven", "twelve"
     };
 
     private static readonly string[] MinuteNames = new[]
     {
-        "Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
-        "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen",
-        "Eighteen", "Nineteen", "Twenty", "Twenty-One", "Twenty-Two", "Twenty-Three",
-        "Twenty-Four", "Twenty-Five", "Twenty-Six", "Twenty-Seven", "Twenty-Eight",
-        "Twenty-Nine", "Thirty"
+        "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+        "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen",
+        "eighteen", "nineteen", "twenty", "twenty-one", "twenty-two", "twenty-three",
+        "twenty-four", "twenty-five", "twenty-six", "twenty-seven", "twenty-eight",
+        "twenty-nine", "thirty"
     };
 
     /// <summary>
@@ -48,23 +48,23 @@ public static class NaturalLanguageTimeFormatter
         // Handle exact hours (for hours other than 0 and 12)
         if (minute == 0)
         {
-            // Use word format for exact hours (e.g., "Eleven o'Clock")
+            // Use word format for exact hours (e.g., "Eleven o'clock")
             hourName = HourNames[hour12];
-            return $"{hourName} o'Clock";
+            return CapitalizeFirst($"{hourName} o'clock");
         }
 
         // Handle half past
         if (minute == 30)
         {
             hourName = HourNames[hour12];
-            return $"Half past {hourName}";
+            return CapitalizeFirst($"half past {hourName}");
         }
 
         // Handle quarter past
         if (minute == 15)
         {
             hourName = HourNames[hour12];
-            return $"Quarter past {hourName}";
+            return CapitalizeFirst($"quarter past {hourName}");
         }
 
         // Handle quarter to
@@ -72,7 +72,7 @@ public static class NaturalLanguageTimeFormatter
         {
             var nextHour = (hour12 + 1) % 12;
             hourName = HourNames[nextHour];
-            return $"Quarter to {hourName}";
+            return CapitalizeFirst($"quarter to {hourName}");
         }
 
         // Handle minutes to (only when minute > 30 and minute % 5 == 0)
@@ -82,13 +82,13 @@ public static class NaturalLanguageTimeFormatter
             var minutesTo = 60 - minute;
             var nextHourName = HourNames[(hour12 + 1) % 12];
             var minutesToName = GetMinuteName(minutesTo);
-            return $"{minutesToName} minute{(minutesTo == 1 ? "" : "s")} to {nextHourName}";
+            return CapitalizeFirst($"{minutesToName} minute{(minutesTo == 1 ? "" : "s")} to {nextHourName}");
         }
 
         // Handle minutes past (for all other cases)
         var minuteName = GetMinuteName(minute);
         hourName = HourNames[hour12];
-        return $"{minuteName} minute{(minute == 1 ? "" : "s")} past {hourName}";
+        return CapitalizeFirst($"{minuteName} minute{(minute == 1 ? "" : "s")} past {hourName}");
     }
 
     private static string GetMinuteName(int minute)
@@ -104,37 +104,55 @@ public static class NaturalLanguageTimeFormatter
         {
             if (minute <= 39)
             {
-                // 31-39: "Thirty-One" through "Thirty-Nine"
+                // 31-39: "thirty-one" through "thirty-nine"
                 var ones = minute % 10;
                 if (ones == 0)
                 {
-                    return "Thirty";
+                    return "thirty";
                 }
-                return $"Thirty-{MinuteNames[ones]}";
+                return $"thirty-{MinuteNames[ones]}";
             }
             else if (minute <= 49)
             {
-                // 40-49: "Forty" through "Forty-Nine"
+                // 40-49: "forty" through "forty-nine"
                 var ones = minute % 10;
                 if (ones == 0)
                 {
-                    return "Forty";
+                    return "forty";
                 }
-                return $"Forty-{MinuteNames[ones]}";
+                return $"forty-{MinuteNames[ones]}";
             }
             else
             {
-                // 50-59: "Fifty" through "Fifty-Nine"
+                // 50-59: "fifty" through "fifty-nine"
                 var ones = minute % 10;
                 if (ones == 0)
                 {
-                    return "Fifty";
+                    return "fifty";
                 }
-                return $"Fifty-{MinuteNames[ones]}";
+                return $"fifty-{MinuteNames[ones]}";
             }
         }
 
         return minute.ToString();
+    }
+
+    /// <summary>
+    /// Capitalizes only the first letter of the string.
+    /// </summary>
+    private static string CapitalizeFirst(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return text;
+        }
+
+        if (text.Length == 1)
+        {
+            return char.ToUpper(text[0]).ToString();
+        }
+
+        return char.ToUpper(text[0]) + text.Substring(1);
     }
 }
 
