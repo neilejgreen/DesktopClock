@@ -75,9 +75,9 @@ public static class NaturalLanguageTimeFormatter
             return CapitalizeFirst($"quarter to {hourName}");
         }
 
-        // Handle minutes to (only when minute > 30 and minute % 5 == 0)
-        // This covers 35, 40, 50, 55 (30 is "Half past", 45 is "Quarter to")
-        if (minute > 30 && minute % 5 == 0)
+        // Handle minutes to (when minute > 30 and minute % 5 == 0, or when minute is 55-59)
+        // This covers 35, 40, 50, 55-59 (30 is "Half past", 45 is "Quarter to")
+        if ((minute > 30 && minute % 5 == 0) || (minute >= 55 && minute <= 59))
         {
             var minutesTo = 60 - minute;
             var nextHourName = HourNames[(hour12 + 1) % 12];
