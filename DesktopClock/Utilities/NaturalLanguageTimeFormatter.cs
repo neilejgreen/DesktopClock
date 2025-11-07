@@ -5,21 +5,22 @@ namespace DesktopClock.Utilities;
 /// <summary>
 /// Converts DateTime to natural language time format (e.g., "Half past two", "Noon", "Eleven o'clock").
 /// </summary>
-public class NaturalLanguageTimeFormatter(bool its = true, bool capitalizeFirst = true)
+public class NaturalLanguageTimeFormatter(
+    bool its = true,
+    bool capitalizeFirst = true,
+    bool useOClock = true
+    )
 {
     private static readonly string[] HourNames =
     [
-        "twelve", "one", "two", "three", "four", "five", "six",
-        "seven", "eight", "nine", "ten", "eleven", "twelve"
+        "midnight", "one", "two", "three", "four", "five", "six",
+        "seven", "eight", "nine", "ten", "eleven", "noon"
     ];
 
     private static readonly string[] MinuteNames =
     [
-        "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
-        "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen",
-        "eighteen", "nineteen", "twenty", "twenty-one", "twenty-two", "twenty-three",
-        "twenty-four", "twenty-five", "twenty-six", "twenty-seven", "twenty-eight",
-        "twenty-nine", "thirty"
+        "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+        "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"
     ];
 
     /// <summary>
@@ -31,7 +32,11 @@ public class NaturalLanguageTimeFormatter(bool its = true, bool capitalizeFirst 
     {
         string itsPrefix = its ? "It's " : "";
         string timeString = $"{itsPrefix}{GetTimeString(dateTime)}";
-        timeString = capitalizeFirst ? CapitalizeFirst(timeString) : timeString;
+        if (capitalizeFirst && timeString.Length > 0)
+        {
+            timeString = timeString.Substring(0, 1).ToUpper() + timeString.Substring(1);
+        }
+
         return timeString;
     }
 
@@ -39,20 +44,19 @@ public class NaturalLanguageTimeFormatter(bool its = true, bool capitalizeFirst 
     {
         var hour = dateTime.Hour;
         var minute = dateTime.Minute;
-        var hour12 = hour % 12;
-        var hourName = HourNames[hour12];
-        var nextHourName = HourNames[(hour12 + 1) % 12];
+        var hourName = GetHourName(hour);
+        var nextHourName = GetHourName(hour + 1);
         var minutesPast = GetMinuteName(minute);
         var minutesTo = GetMinuteName(60 - minute);
         return (hour, minute) switch
         {
-            // Special cases
-            (12, 0) => "noon",
-            (0, 0) => "midnight",
+            // noon or midnight
+            (12, 0) or (0, 0) => hourName,
 
-            // Handle exact hours (for hours other than 0 and 12)
-            (_, 0) => $"{hourName} o'clock",
+            // Handle exact hours
+            (_, 0) => $"{hourName}{(useOClock ? " o'clock" : "")}",
 
+            // Handle small minutes past
             (_, < 10) => $"{minutesPast} minute{(minute == 1 ? "" : "s")} past {hourName}",
 
             // Handle quarter past
@@ -64,71 +68,54 @@ public class NaturalLanguageTimeFormatter(bool its = true, bool capitalizeFirst 
             // Handle quarter to
             (_, 45) => $"quarter to {nextHourName}",
 
-            // Handle small minutes to
-            (_, >= 55) => $"{minutesTo} minutes to {nextHourName}",
-
             // Handle %5 to
             (_, int min) when min % 5 == 0 => $"{minutesTo} to {nextHourName}",
+
+            // Handle small minutes to
+            (_, > 55) => $"{minutesTo} minutes to {nextHourName}",
+
+            // "noon thirteen sounds wrong"
+            (12, _) or (0, _) => $"{minutesPast} past {hourName}",
 
             // Handle minutes past
             _ => $"{hourName} {minutesPast}",
         };
     }
 
-    private static string GetMinuteName(int minute)
+    private static string GetHourName(int hour) => hour switch
     {
-        if (minute <= 30)
-        {
-            return MinuteNames[minute];
-        }
+        12 => HourNames[12],
+        24 => HourNames[0],
+        _ => HourNames[hour % 12]
+    };
 
-        // For minutes > 30, we need to construct the name
-        // This is used for "past" format when minute > 30 and not a multiple of 5
-        if (minute <= 59)
-        {
-            if (minute <= 39)
-            {
-                // 31-39: "thirty-one" through "thirty-nine"
-                var ones = minute % 10;
-                if (ones == 0)
-                {
-                    return "thirty";
-                }
-                return $"thirty-{MinuteNames[ones]}";
-            }
-            else if (minute <= 49)
-            {
-                // 40-49: "forty" through "forty-nine"
-                var ones = minute % 10;
-                if (ones == 0)
-                {
-                    return "forty";
-                }
-                return $"forty-{MinuteNames[ones]}";
-            }
-            else
-            {
-                // 50-59: "fifty" through "fifty-nine"
-                var ones = minute % 10;
-                if (ones == 0)
-                {
-                    return "fifty";
-                }
-                return $"fifty-{MinuteNames[ones]}";
-            }
-        }
+    private static string GetMinuteName(int minute) => minute switch
+    {
+        // Handle out of range first
+        < 0 or > 59 => throw new ArgumentOutOfRangeException(nameof(minute), minute, "Minute must be between 0 and 59"),
 
-        return minute.ToString();
-    }
+        // Handle simple cases (0-19) directly from array
+        < 20 => MinuteNames[minute],
 
-    /// <summary>
-    /// Capitalizes only the first letter of the string.
-    /// </summary>
-    private static string CapitalizeFirst(string text) =>
-        text switch
+        // For minutes >= 20, construct compound numbers consistently
+        _ => GetCompoundMinuteName(minute)
+    };
+
+    private static string GetCompoundMinuteName(int minute)
+    {
+        var tens = minute / 10;
+        var ones = minute % 10;
+
+        var tensName = tens switch
         {
-            null or "" => text,
-            _ => text.Substring(0, 1).ToUpper() + text.Substring(1)
+            2 => "twenty",
+            3 => "thirty",
+            4 => "forty",
+            5 => "fifty",
+            _ => throw new ArgumentOutOfRangeException(nameof(minute), $"Unexpected tens value: {tens}")
         };
+
+        return ones == 0 ? tensName : $"{tensName}-{MinuteNames[ones]}";
+    }
 }
 
