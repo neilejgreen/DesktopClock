@@ -7,6 +7,7 @@ namespace DesktopClock.Utilities;
 /// </summary>
 public static class NaturalLanguageTimeFormatter
 {
+    private const bool IncludeMinuteWord = false;
     private static readonly string[] HourNames = new[]
     {
         "twelve", "one", "two", "three", "four", "five", "six",
@@ -82,13 +83,17 @@ public static class NaturalLanguageTimeFormatter
             var minutesTo = 60 - minute;
             var nextHourName = HourNames[(hour12 + 1) % 12];
             var minutesToName = GetMinuteName(minutesTo);
-            return CapitalizeFirst($"{minutesToName} minute{(minutesTo == 1 ? "" : "s")} to {nextHourName}");
+            return CapitalizeFirst($"{minutesToName} {Minutes(minutesTo)}to {nextHourName}");
         }
 
         // Handle minutes past (for all other cases)
         var minuteName = GetMinuteName(minute);
         hourName = HourNames[hour12];
-        return CapitalizeFirst($"{minuteName} minute{(minute == 1 ? "" : "s")} past {hourName}");
+        return CapitalizeFirst($"{minuteName} {Minutes(minute)}past {hourName}");
+
+        static string Minutes(int mins) =>
+            IncludeMinuteWord ? $"minute{(mins == 1 ? "" : "s")} " : "";
+
     }
 
     private static string GetMinuteName(int minute)
