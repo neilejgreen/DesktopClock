@@ -30,7 +30,7 @@ public class NaturalLanguageTimeFormatter(
     /// <returns>A natural language representation of the time.</returns>
     public string Format(DateTime dateTime)
     {
-        string itsPrefix = its ? "It's " : "";
+        string itsPrefix = its ? "it's " : "";
         string timeString = $"{itsPrefix}{GetTimeString(dateTime)}";
         if (capitalizeFirst && timeString.Length > 0)
         {
