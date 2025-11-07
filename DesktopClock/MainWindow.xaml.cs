@@ -375,7 +375,7 @@ public partial class MainWindow : Window
             {
                 if (Settings.Default.UseNaturalLanguage)
                 {
-                    return Format(timeInSelectedZone.DateTime);
+                    return new NaturalLanguageTimeFormatter(its: false, capitalizeFirst: false).Format(timeInSelectedZone.DateTime);
                 }
 
                 return Tokenizer.FormatWithTokenizerOrFallBack(timeInSelectedZone, Settings.Default.Format, CultureInfo.DefaultThreadCurrentCulture);

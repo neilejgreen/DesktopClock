@@ -5,95 +5,74 @@ namespace DesktopClock.Utilities;
 /// <summary>
 /// Converts DateTime to natural language time format (e.g., "Half past two", "Noon", "Eleven o'clock").
 /// </summary>
-public static class NaturalLanguageTimeFormatter
+public class NaturalLanguageTimeFormatter(bool its = true, bool capitalizeFirst = true)
 {
-    private const bool IncludeMinuteWord = false;
-    private static readonly string[] HourNames = new[]
-    {
+    private static readonly string[] HourNames =
+    [
         "twelve", "one", "two", "three", "four", "five", "six",
         "seven", "eight", "nine", "ten", "eleven", "twelve"
-    };
+    ];
 
-    private static readonly string[] MinuteNames = new[]
-    {
+    private static readonly string[] MinuteNames =
+    [
         "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
         "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen",
         "eighteen", "nineteen", "twenty", "twenty-one", "twenty-two", "twenty-three",
         "twenty-four", "twenty-five", "twenty-six", "twenty-seven", "twenty-eight",
         "twenty-nine", "thirty"
-    };
+    ];
 
     /// <summary>
     /// Converts a DateTime to natural language time format.
     /// </summary>
     /// <param name="dateTime">The DateTime to convert.</param>
     /// <returns>A natural language representation of the time.</returns>
-    public static string Format(DateTime dateTime)
+    public string Format(DateTime dateTime)
+    {
+        string itsPrefix = its ? "It's " : "";
+        string timeString = $"{itsPrefix}{GetTimeString(dateTime)}";
+        timeString = capitalizeFirst ? CapitalizeFirst(timeString) : timeString;
+        return timeString;
+    }
+
+    private string GetTimeString(DateTime dateTime)
     {
         var hour = dateTime.Hour;
         var minute = dateTime.Minute;
         var hour12 = hour % 12;
-        string hourName;
-
-        // Special cases
-        if (minute == 0 && hour == 12)
+        var hourName = HourNames[hour12];
+        var nextHourName = HourNames[(hour12 + 1) % 12];
+        var minutesPast = GetMinuteName(minute);
+        var minutesTo = GetMinuteName(60 - minute);
+        return (hour, minute) switch
         {
-            return "Noon";
-        }
+            // Special cases
+            (12, 0) => "noon",
+            (0, 0) => "midnight",
 
-        if (minute == 0 && hour == 0)
-        {
-            return "Midnight";
-        }
+            // Handle exact hours (for hours other than 0 and 12)
+            (_, 0) => $"{hourName} o'clock",
 
-        // Handle exact hours (for hours other than 0 and 12)
-        if (minute == 0)
-        {
-            // Use word format for exact hours (e.g., "Eleven o'clock")
-            hourName = HourNames[hour12];
-            return CapitalizeFirst($"{hourName} o'clock");
-        }
+            (_, < 10) => $"{minutesPast} minute{(minute == 1 ? "" : "s")} past {hourName}",
 
-        // Handle half past
-        if (minute == 30)
-        {
-            hourName = HourNames[hour12];
-            return CapitalizeFirst($"half past {hourName}");
-        }
+            // Handle quarter past
+            (_, 15) => $"quarter past {hourName}",
 
-        // Handle quarter past
-        if (minute == 15)
-        {
-            hourName = HourNames[hour12];
-            return CapitalizeFirst($"quarter past {hourName}");
-        }
+            // Handle half past
+            (_, 30) => $"half past {hourName}",
 
-        // Handle quarter to
-        if (minute == 45)
-        {
-            var nextHour = (hour12 + 1) % 12;
-            hourName = HourNames[nextHour];
-            return CapitalizeFirst($"quarter to {hourName}");
-        }
+            // Handle quarter to
+            (_, 45) => $"quarter to {nextHourName}",
 
-        // Handle minutes to (when minute > 30 and minute % 5 == 0, or when minute is 55-59)
-        // This covers 35, 40, 50, 55-59 (30 is "Half past", 45 is "Quarter to")
-        if ((minute > 30 && minute % 5 == 0) || (minute >= 55 && minute <= 59))
-        {
-            var minutesTo = 60 - minute;
-            var nextHourName = HourNames[(hour12 + 1) % 12];
-            var minutesToName = GetMinuteName(minutesTo);
-            return CapitalizeFirst($"{minutesToName} {Minutes(minutesTo)}to {nextHourName}");
-        }
+            // Handle small minutes to
+            (_, >= 55) => $"{minutesTo} minutes to {nextHourName}",
 
-        // Handle minutes past (for all other cases)
-        var minuteName = GetMinuteName(minute);
-        hourName = HourNames[hour12];
-        return CapitalizeFirst($"{minuteName} {Minutes(minute)}past {hourName}");
+            // Handle %5 to
+            (_, int min) when min % 5 == 0 => $"{minutesTo} to {nextHourName}",
 
-        static string Minutes(int mins) =>
-            IncludeMinuteWord ? $"minute{(mins == 1 ? "" : "s")} " : "";
-
+            // Handle minutes past
+            _ => $"{hourName} {minutesPast}",
+        };
     }
 
     private static string GetMinuteName(int minute)
@@ -145,19 +124,11 @@ public static class NaturalLanguageTimeFormatter
     /// <summary>
     /// Capitalizes only the first letter of the string.
     /// </summary>
-    private static string CapitalizeFirst(string text)
-    {
-        if (string.IsNullOrEmpty(text))
+    private static string CapitalizeFirst(string text) =>
+        text switch
         {
-            return text;
-        }
-
-        if (text.Length == 1)
-        {
-            return char.ToUpper(text[0]).ToString();
-        }
-
-        return char.ToUpper(text[0]) + text.Substring(1);
-    }
+            null or "" => text,
+            _ => text.Substring(0, 1).ToUpper() + text.Substring(1)
+        };
 }
 
