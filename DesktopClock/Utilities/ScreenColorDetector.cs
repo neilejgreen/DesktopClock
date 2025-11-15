@@ -1,10 +1,13 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
-using System.Drawing.Imaging;
-using System.Runtime.InteropServices;
+using System.Linq;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
+using Wacton.Unicolour;
+using Color = System.Windows.Media.Color;
+using Point = System.Windows.Point;
 
 namespace DesktopClock.Utilities;
 
@@ -13,62 +16,66 @@ namespace DesktopClock.Utilities;
 /// </summary>
 public static class ScreenColorDetector
 {
-    [DllImport("user32.dll")]
-    private static extern IntPtr GetDC(IntPtr hWnd);
+    private static readonly Unicolour Black = new(ColourSpace.Rgb255, 0, 0, 0);
 
-    [DllImport("user32.dll")]
-    private static extern bool ReleaseDC(IntPtr hWnd, IntPtr hDC);
+    /// <summary>
+    /// Gets the optimal text color by adjusting the lightness of the current text color
+    /// to ensure good contrast with the background while preserving hue and saturation when possible.
+    /// Uses WCAG AA contrast ratio (4.5:1) as the target.
+    /// Filters out pixels matching the displayed text color to avoid sampling the clock itself.
+    /// </summary>
+    /// <returns>The adjusted text color with optimal contrast and preserved hue.</returns>
+    public static Color GetOptimalTextColorWithHue()
+    {
+        // Get both colors from settings - adapt TextColor, exclude OverrideTextColor from sampling
+        var settings = Properties.Settings.Default;
+        var textColorToAdapt = settings.TextColor;
+        var displayedTextColor = settings.OverrideTextColor ?? settings.TextColor;
+        
+        Unicolour bgColor = GetAverageColorBehindWindow(Application.Current.MainWindow);
+        Unicolour textColor = textColorToAdapt.ToUnicolour();
+        
+        const double targetContrastRatio = 3.0; // WCAG AA large text / WCAG AAA minimum - more balanced for vibrant colors
 
-    [DllImport("gdi32.dll")]
-    private static extern IntPtr CreateCompatibleDC(IntPtr hdc);
+        // Determine if we need light or dark text
+        bool needLightText = bgColor.RelativeLuminance < 0.5;
 
-    [DllImport("gdi32.dll")]
-    private static extern IntPtr CreateCompatibleBitmap(IntPtr hdc, int nWidth, int nHeight);
+        // Try to find the minimum lightness adjustment needed for adequate contrast
+        // while preserving the original hue and saturation
+        var adjustedColor = FindMinimalLightnessForContrast(
+            textColor,
+            bgColor,
+            targetContrastRatio,
+            needLightText);
 
-    [DllImport("gdi32.dll")]
-    private static extern IntPtr SelectObject(IntPtr hdc, IntPtr hgdiobj);
-
-    [DllImport("gdi32.dll")]
-    private static extern bool BitBlt(IntPtr hdcDest, int nXDest, int nYDest, int nWidth, int nHeight,
-        IntPtr hdcSrc, int nXSrc, int nYSrc, uint dwRop);
-
-    [DllImport("gdi32.dll")]
-    private static extern bool DeleteObject(IntPtr hObject);
-
-    [DllImport("gdi32.dll")]
-    private static extern bool DeleteDC(IntPtr hdc);
-
-    [DllImport("gdi32.dll")]
-    private static extern uint GetPixel(IntPtr hdc, int nXPos, int nYPos);
-
-    private const uint SRCCOPY = 0x00CC0020;
+        return adjustedColor.ToMediaColor();
+    }
 
     /// <summary>
     /// Captures the average color of the screen area behind the specified window.
     /// </summary>
     /// <param name="window">The WPF window to analyze behind.</param>
-    /// <param name="sampleSize">Number of pixels to sample for average calculation (default: 100)</param>
-    /// <returns>The average color behind the window, or Color.Black if capture fails.</returns>
-    public static System.Windows.Media.Color GetAverageColorBehindWindow(Window window, int sampleSize = 100)
+    /// <returns>The average color behind the window as a Unicolour, or black if capture fails.</returns>
+    private static Unicolour GetAverageColorBehindWindow(Window window)
     {
         try
         {
             // Get window bounds in screen coordinates
             var windowBounds = GetWindowBounds(window);
             if (windowBounds.Width <= 0 || windowBounds.Height <= 0)
-                return System.Windows.Media.Colors.Black;
+                return Black;
 
             // Capture screen behind window
             using var bitmap = CaptureScreenRegion(windowBounds);
             if (bitmap == null)
-                return System.Windows.Media.Colors.Black;
+                return Black;
 
-            // Calculate average color from sampled pixels
-            return CalculateAverageColor(bitmap, sampleSize);
+            // Calculate average color from border pixels only
+            return CalculateAverageColor(bitmap);
         }
         catch
         {
-            return System.Windows.Media.Colors.Black;
+            return Black;
         }
     }
 
@@ -76,259 +83,149 @@ public static class ScreenColorDetector
     /// Gets the bounds of a WPF window in screen coordinates.
     /// </summary>
     private static Rectangle GetWindowBounds(Window window)
-    {
-        var source = PresentationSource.FromVisual(window) as HwndSource;
-        if (source == null)
-            return Rectangle.Empty;
+{
+    // Convert window corners to screen coordinates
+    var topLeft = window.PointToScreen(new Point(0, 0));
+    var bottomRight = window.PointToScreen(new Point(window.ActualWidth, window.ActualHeight));
 
-        // Get DPI scaling
-        var dpiScale = VisualTreeHelper.GetDpi(window);
-        var scaleX = dpiScale.DpiScaleX;
-        var scaleY = dpiScale.DpiScaleY;
-
-        // Convert WPF coordinates to screen coordinates
-        var left = (int)(window.Left * scaleX);
-        var top = (int)(window.Top * scaleY);
-        var width = (int)(window.ActualWidth * scaleX);
-        var height = (int)(window.ActualHeight * scaleY);
-
-        return new Rectangle(left, top, width, height);
-    }
+    return new Rectangle(
+        (int)topLeft.X,
+        (int)topLeft.Y,
+        (int)(bottomRight.X - topLeft.X),
+        (int)(bottomRight.Y - topLeft.Y));
+}
 
     /// <summary>
-    /// Captures a region of the screen using GDI.
+    /// Captures a region of the screen using Graphics.CopyFromScreen.
     /// </summary>
     private static Bitmap CaptureScreenRegion(Rectangle bounds)
     {
-        IntPtr screenDC = IntPtr.Zero;
-        IntPtr memDC = IntPtr.Zero;
-        IntPtr hBitmap = IntPtr.Zero;
-        IntPtr hOld = IntPtr.Zero;
-
         try
         {
-            // Get screen DC
-            screenDC = GetDC(IntPtr.Zero);
-            if (screenDC == IntPtr.Zero)
-                return null;
-
-            // Create compatible DC and bitmap
-            memDC = CreateCompatibleDC(screenDC);
-            if (memDC == IntPtr.Zero)
-                return null;
-
-            hBitmap = CreateCompatibleBitmap(screenDC, bounds.Width, bounds.Height);
-            if (hBitmap == IntPtr.Zero)
-                return null;
-
-            hOld = SelectObject(memDC, hBitmap);
-
-            // Copy screen content to bitmap
-            if (!BitBlt(memDC, 0, 0, bounds.Width, bounds.Height, screenDC, bounds.X, bounds.Y, SRCCOPY))
-                return null;
-
-            // Create managed bitmap from HBITMAP
-            return Image.FromHbitmap(hBitmap);
+            var bitmap = new Bitmap(bounds.Width, bounds.Height);
+            using (var graphics = Graphics.FromImage(bitmap))
+            {
+                graphics.CopyFromScreen(bounds.Left, bounds.Top, 0, 0, bounds.Size);
+            }
+            return bitmap;
         }
-        finally
+        catch
         {
-            // Cleanup
-            if (hOld != IntPtr.Zero)
-                SelectObject(memDC, hOld);
-            if (hBitmap != IntPtr.Zero)
-                DeleteObject(hBitmap);
-            if (memDC != IntPtr.Zero)
-                DeleteDC(memDC);
-            if (screenDC != IntPtr.Zero)
-                ReleaseDC(IntPtr.Zero, screenDC);
+            return null;
         }
     }
 
     /// <summary>
-    /// Calculates the average color from a bitmap by sampling pixels.
+    /// Calculates the average color from the 2px border pixels around the bitmap edges.
     /// </summary>
-    private static System.Windows.Media.Color CalculateAverageColor(Bitmap bitmap, int sampleSize)
+    private static Unicolour CalculateAverageColor(Bitmap bitmap)
     {
-        var random = new Random();
-        long totalR = 0, totalG = 0, totalB = 0;
-        int validSamples = 0;
+        int width = bitmap.Width;
+        int height = bitmap.Height;
+        
+        (int x, int y)[] pixels = [
+            // top and bottom rows
+            .. from x in Enumerable.Range(0, width)
+               from y in new[] { 0, 1, height - 2, height - 1 }
+               select (x, y),
+            // side columns
+            .. from x in new[] { 0, 1, width - 2, width - 1 }
+               from y in Enumerable.Range(2, height - 4)
+               select (x, y)
+        ];
 
-        // Sample random pixels for efficiency
-        for (int i = 0; i < sampleSize; i++)
-        {
-            var x = random.Next(0, bitmap.Width);
-            var y = random.Next(0, bitmap.Height);
+        if (pixels.Length == 0)
+            return Black;
 
-            var pixel = bitmap.GetPixel(x, y);
-            totalR += pixel.R;
-            totalG += pixel.G;
-            totalB += pixel.B;
-            validSamples++;
-        }
+        System.Drawing.Color[] colors = [..pixels.Select(pixel => bitmap.GetPixel(pixel.x, pixel.y))];
 
-        if (validSamples == 0)
-            return System.Windows.Media.Colors.Black;
+        byte
+            avgR = (byte)colors.Select(c => (decimal)c.R).Average(),
+            avgG = (byte)colors.Select(c => (decimal)c.G).Average(),
+            avgB = (byte)colors.Select(c => (decimal)c.B).Average();
 
-        // Calculate averages
-        var avgR = (byte)(totalR / validSamples);
-        var avgG = (byte)(totalG / validSamples);
-        var avgB = (byte)(totalB / validSamples);
-
-        return System.Windows.Media.Color.FromRgb(avgR, avgG, avgB);
+        return new Unicolour(ColourSpace.Rgb255, avgR, avgG, avgB);
     }
 
     /// <summary>
-    /// Determines if a color is considered "dark" based on its luminance.
+    /// Finds the minimum lightness adjustment needed to achieve target contrast ratio.
+    /// Preserves hue and attempts to preserve saturation when possible.
     /// </summary>
-    /// <param name="color">The color to analyze.</param>
-    /// <returns>True if the color is dark, false if light.</returns>
-    public static bool IsColorDark(System.Windows.Media.Color color)
+    private static Unicolour FindMinimalLightnessForContrast(
+        Unicolour textColor,
+        Unicolour backgroundColor,
+        double targetContrastRatio,
+        bool needLightText)
     {
-        // Calculate luminance using standard formula
-        var luminance = ((0.299 * color.R) + (0.587 * color.G) + (0.114 * color.B)) / 255.0;
-        return luminance < 0.5;
+        var originalHsl = textColor.Hsl;
+        const double SaturationBoostAmount = 0.05; // Very subtle saturation boost to preserve hue
+
+        // Number of binary search iterations for lightness adjustment; 20 provides sufficient precision for color contrast.
+        const int BinarySearchIterations = 20;
+
+        // If original color already has adequate contrast, return it as-is
+        if (textColor.Contrast(backgroundColor) >= targetContrastRatio)
+        {
+            return textColor;
+        }
+
+        // If saturation boost alone helps, try that first
+        var saturatedColor = new Unicolour(ColourSpace.Hsl, originalHsl.H, Math.Min(1.0, originalHsl.S + SaturationBoostAmount), originalHsl.L);
+        if (saturatedColor.Contrast(backgroundColor) >= targetContrastRatio)
+        {
+            return saturatedColor;
+        }
+
+        // Only adjust lightness minimally if needed
+        double minL = needLightText ? 0.7 : 0.0;
+        double maxL = needLightText ? 1.0 : 0.3;
+        double bestL = originalHsl.L;
+
+        // Binary search for minimum lightness needed
+        for (var i = 0; i < BinarySearchIterations; i++)
+        {
+            double midL = (minL + maxL) / 2.0;
+            var testColor = new Unicolour(ColourSpace.Hsl, originalHsl.H, Math.Min(1.0, originalHsl.S + SaturationBoostAmount), midL);
+            double contrast = testColor.Contrast(backgroundColor);
+
+            if (contrast >= targetContrastRatio)
+            {
+                bestL = midL;
+                maxL = midL;
+            }
+            else
+            {
+                minL = midL;
+            }
+        }
+
+        return new Unicolour(ColourSpace.Hsl, originalHsl.H, Math.Min(1.0, originalHsl.S + SaturationBoostAmount), bestL);
+    }
+}
+
+/// <summary>
+/// Extension methods for converting between WPF Color and Unicolour.
+/// </summary>
+internal static class ColorExtensions
+{
+    /// <summary>
+    /// Converts a WPF Media Color to Unicolour.
+    /// </summary>
+    /// <param name="color">The WPF Color to convert.</param>
+    /// <returns>A Unicolour representation of the color.</returns>
+    internal static Unicolour ToUnicolour(this Color color)
+    {
+        return new Unicolour(ColourSpace.Rgb255, color.R, color.G, color.B);
     }
 
     /// <summary>
-    /// Gets the optimal text color by adjusting the lightness of the current text color
-    /// to ensure good contrast with the background while preserving hue.
+    /// Converts a Unicolour to WPF Media Color.
     /// </summary>
-    /// <param name="currentTextColor">The current text color to adjust.</param>
-    /// <param name="backgroundColor">The background color to contrast against.</param>
-    /// <returns>The adjusted text color with optimal contrast.</returns>
-    public static System.Windows.Media.Color GetOptimalTextColorWithHue(
-        System.Windows.Media.Color currentTextColor,
-        System.Windows.Media.Color backgroundColor)
+    /// <param name="unicolour">The Unicolour to convert.</param>
+    /// <returns>A WPF Color representation of the color.</returns>
+    internal static Color ToMediaColor(this Unicolour unicolour)
     {
-        // Convert colors to HSL
-        var textHsl = RgbToHsl(currentTextColor);
-        var bgHsl = RgbToHsl(backgroundColor);
-
-        // If background is dark, make text light; if background is light, make text dark
-        // Keep the same hue and saturation from the original text color
-        var targetLightness = IsColorDark(backgroundColor) ? 0.9 : 0.1;
-
-        // Adjust the lightness while preserving hue and saturation
-        var adjustedHsl = new HslColor(textHsl.H, textHsl.S, targetLightness);
-
-        return HslToRgb(adjustedHsl);
-    }
-
-    /// <summary>
-    /// Represents a color in HSL (Hue, Saturation, Lightness) color space.
-    /// </summary>
-    private struct HslColor
-    {
-        public double H { get; }  // Hue (0-360)
-        public double S { get; }  // Saturation (0-1)
-        public double L { get; }  // Lightness (0-1)
-
-        public HslColor(double h, double s, double l)
-        {
-            H = h;
-            S = s;
-            L = l;
-        }
-    }
-
-    /// <summary>
-    /// Converts RGB color to HSL color space.
-    /// </summary>
-    private static HslColor RgbToHsl(System.Windows.Media.Color rgb)
-    {
-        var r = rgb.R / 255.0;
-        var g = rgb.G / 255.0;
-        var b = rgb.B / 255.0;
-
-        var max = Math.Max(r, Math.Max(g, b));
-        var min = Math.Min(r, Math.Min(g, b));
-        var delta = max - min;
-
-        var h = 0.0;
-        var s = 0.0;
-        var l = (max + min) / 2.0;
-
-        if (delta != 0)
-        {
-            s = l > 0.5 ? delta / (2.0 - max - min) : delta / (max + min);
-
-            if (max == r)
-                h = ((g - b) / delta) + (g < b ? 6 : 0);
-            else if (max == g)
-                h = ((b - r) / delta) + 2;
-            else if (max == b)
-                h = ((r - g) / delta) + 4;
-
-            h /= 6.0;
-        }
-
-        return new HslColor(h * 360.0, s, l);
-    }
-
-    /// <summary>
-    /// Converts HSL color to RGB color space.
-    /// </summary>
-    private static System.Windows.Media.Color HslToRgb(HslColor hsl)
-    {
-        var h = hsl.H / 360.0;
-        var s = hsl.S;
-        var l = hsl.L;
-
-        if (s == 0)
-        {
-            // Achromatic (gray)
-            var gray = (byte)Math.Round(l * 255);
-            return System.Windows.Media.Color.FromRgb(gray, gray, gray);
-        }
-
-        var c = (1.0 - Math.Abs((2.0 * l) - 1.0)) * s;
-        var hSix = h * 6.0;
-        var x = c * (1.0 - Math.Abs((hSix % 2.0) - 1.0));
-        var m = l - (c / 2.0);
-
-        double r1, g1, b1;
-
-        if (h < 1.0 / 6.0)
-        {
-            r1 = c;
-            g1 = x;
-            b1 = 0;
-        }
-        else if (h < 2.0 / 6.0)
-        {
-            r1 = x;
-            g1 = c;
-            b1 = 0;
-        }
-        else if (h < 3.0 / 6.0)
-        {
-            r1 = 0;
-            g1 = c;
-            b1 = x;
-        }
-        else if (h < 4.0 / 6.0)
-        {
-            r1 = 0;
-            g1 = x;
-            b1 = c;
-        }
-        else if (h < 5.0 / 6.0)
-        {
-            r1 = x;
-            g1 = 0;
-            b1 = c;
-        }
-        else
-        {
-            r1 = c;
-            g1 = 0;
-            b1 = x;
-        }
-
-        var r = (byte)Math.Round((r1 + m) * 255);
-        var g = (byte)Math.Round((g1 + m) * 255);
-        var b = (byte)Math.Round((b1 + m) * 255);
-
-        return System.Windows.Media.Color.FromRgb(r, g, b);
+        Rgb255 rgb = unicolour.Rgb.Byte255;
+        return Color.FromRgb((byte)rgb.R, (byte)rgb.G, (byte)rgb.B);
     }
 }

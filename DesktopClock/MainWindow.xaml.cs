@@ -9,6 +9,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DesktopClock.Properties;
@@ -17,7 +18,7 @@ using H.NotifyIcon;
 using H.NotifyIcon.EfficiencyMode;
 using Humanizer;
 using WpfWindowPlacement;
-using static DesktopClock.Utilities.NaturalLanguageTimeFormatter;
+using static DesktopClock.Utilities.ScreenColorDetector;
 
 namespace DesktopClock;
 
@@ -348,12 +349,8 @@ public partial class MainWindow : Window
             // Run color detection on dispatcher to ensure we have window bounds
             Dispatcher.Invoke(() =>
             {
-                // Get the average color behind the window
-                var backgroundColor = ScreenColorDetector.GetAverageColorBehindWindow(this);
-
                 // Adjust the current text color to contrast with the background
-                var optimalTextColor = ScreenColorDetector.GetOptimalTextColorWithHue(
-                    Settings.Default.TextColor, backgroundColor);
+                var optimalTextColor = ScreenColorDetector.GetOptimalTextColorWithHue();
 
                 // Update the override text color without modifying the saved setting
                 Settings.Default.OverrideTextColor = optimalTextColor;

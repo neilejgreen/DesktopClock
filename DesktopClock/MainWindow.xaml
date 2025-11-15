@@ -111,8 +111,10 @@
     </Window.Resources>
 
     <Viewbox Height="{Binding Height, Source={x:Static p:Settings.Default}, Mode=OneWay}">
-        <Border CornerRadius="{Binding BackgroundCornerRadius, Source={x:Static p:Settings.Default}, Mode=OneWay}"
-                Padding="1,0,1,0">
+        <Border BorderThickness="2"
+                BorderBrush="Transparent">
+            <Border CornerRadius="{Binding BackgroundCornerRadius, Source={x:Static p:Settings.Default}, Mode=OneWay}"
+                    Padding="1,0,1,0">
             <Border.Style>
                 <Style TargetType="Border">
                     <Setter Property="Background" Value="Transparent" />
@@ -181,6 +183,7 @@
                     </Style>
                 </local:OutlinedTextBlock.Style>
             </local:OutlinedTextBlock>
+            </Border>
         </Border>
     </Viewbox>
 </Window>
