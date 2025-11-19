@@ -24,7 +24,7 @@ public partial class App : Application
             if (string.IsNullOrEmpty(text))
                 return string.Empty;
 
-            using var sha = new System.Security.Cryptography.SHA256Managed();
+            using var sha = System.Security.Cryptography.SHA256.Create();
             var textData = System.Text.Encoding.UTF8.GetBytes(text);
             var hash = sha.ComputeHash(textData);
             return BitConverter.ToString(hash).Replace("-", string.Empty);

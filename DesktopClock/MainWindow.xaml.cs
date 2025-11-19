@@ -1,22 +1,17 @@
 ﻿using System;
 using System.ComponentModel;
-using System.Diagnostics;
-using System.Globalization;
-using System.IO;
-using System.Media;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
-using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using DesktopClock.Data;
 using DesktopClock.Properties;
 using DesktopClock.Utilities;
 using H.NotifyIcon;
 using H.NotifyIcon.EfficiencyMode;
-using Humanizer;
 using WpfWindowPlacement;
 using static DesktopClock.Utilities.ScreenColorDetector;
 
@@ -28,153 +23,43 @@ namespace DesktopClock;
 [ObservableObject]
 public partial class MainWindow : Window
 {
-    private readonly SystemClockTimer _systemClockTimer;
+    private readonly IDataProvider _dataProvider;
     private TaskbarIcon _trayIcon;
-    private TimeZoneInfo _timeZone;
-    private SoundPlayer _soundPlayer;
-    private PixelShifter _pixelShifter;
     private int _autoColorUpdateCounter;
 
     /// <summary>
-    /// The current date and time in the selected time zone, or countdown as a formatted string.
+    /// The current date and time as a formatted string.
     /// </summary>
     [ObservableProperty]
     private string _currentTimeOrCountdownString;
-
-    /// <summary>
-    /// The amount of margin applied in order to shift the clock's pixels and help prevent burn-in.
-    /// </summary>
-    [ObservableProperty]
-    private Thickness _pixelShift;
 
     public MainWindow()
     {
         InitializeComponent();
         DataContext = this;
 
-        _timeZone = Settings.Default.TimeZoneInfo;
-
         Settings.Default.PropertyChanged += (s, e) => Dispatcher.Invoke(() => Settings_PropertyChanged(s, e));
 
-        // Not done through binding due to what's explained in the comment in WindowUtil.HideFromScreen().
-        ShowInTaskbar = Settings.Default.ShowInTaskbar;
+        // Always hide from taskbar, use tray only
+        ShowInTaskbar = false;
+
+        // Initialize data provider
+        _dataProvider = new ClockDataProvider();
+        _dataProvider.DataChanged += (s, e) => Dispatcher.Invoke(() => OnDataProviderDataChanged());
 
         // Restore the structure of the last state using the display text.
-        CurrentTimeOrCountdownString = Settings.Default.LastDisplay;
-
-        _systemClockTimer = new();
-        _systemClockTimer.SecondChanged += SystemClockTimer_SecondChanged;
+        CurrentTimeOrCountdownString = Settings.Default.LastDisplay ?? _dataProvider.GetDisplayText();
 
         // The context menu is shared between right-clicking the window and the tray icon.
         ContextMenu = Resources["MainContextMenu"] as ContextMenu;
 
-        ConfigureTrayIcon(!Settings.Default.ShowInTaskbar, true);
-
-        UpdateSoundPlayerEnabled();
+        ConfigureTrayIcon(true);
     }
 
-    /// <summary>
-    /// Copies the current time string to the clipboard.
-    /// </summary>
-    [RelayCommand]
-    public void CopyToClipboard() => Clipboard.SetText(CurrentTimeOrCountdownString);
-
-    /// <summary>
-    /// Minimizes the window.
-    /// </summary>
-    [RelayCommand]
-    public void HideForNow()
+    private void OnDataProviderDataChanged()
     {
-        if (!Settings.Default.TipsShown.HasFlag(TeachingTips.HideForNow))
-        {
-            MessageBox.Show(this, "Minimzing clock. Open later from the taskbar, or tray if enabled.",
-                Title, MessageBoxButton.OK, MessageBoxImage.Information);
-
-            Settings.Default.TipsShown |= TeachingTips.HideForNow;
-        }
-
-        this.HideFromScreen();
-    }
-
-    /// <summary>
-    /// Sets the app's theme to the given value.
-    /// </summary>
-    [RelayCommand]
-    public void SetTheme(Theme theme) => Settings.Default.Theme = theme;
-
-    /// <summary>
-    /// Opens a new settings window or activates the existing one.
-    /// </summary>
-    [RelayCommand]
-    public void OpenSettingsWindow(string tabIndex)
-    {
-        Settings.Default.SettingsTabIndex = int.Parse(tabIndex);
-        App.ShowSingletonWindow<SettingsWindow>(this);
-    }
-    /// <summary>
-    /// Opens the settings file in Notepad.
-    /// </summary>
-    [RelayCommand]
-    public void OpenSettingsFile()
-    {
-        // Teach user how it works.
-        if (!Settings.Default.TipsShown.HasFlag(TeachingTips.AdvancedSettings))
-        {
-            MessageBox.Show(this,
-                "Settings are stored in JSON format and will be opened in Notepad. Save the file for your changes to take effect. To start fresh, delete your '.settings' file.",
-                Title, MessageBoxButton.OK, MessageBoxImage.Information);
-
-            Settings.Default.TipsShown |= TeachingTips.AdvancedSettings;
-        }
-
-        // Save first if we can so it's up-to-date.
-        if (Settings.CanBeSaved)
-            Settings.Default.Save();
-
-        // If it doesn't even exist then it's probably somewhere that requires special access and we shouldn't even be at this point.
-        if (!Settings.Exists)
-        {
-            MessageBox.Show(this,
-                "Settings file doesn't exist and couldn't be created.",
-                Title, MessageBoxButton.OK, MessageBoxImage.Error);
-            return;
-        }
-
-        // Open settings file in notepad.
-        try
-        {
-            Process.Start("notepad", Settings.FilePath);
-        }
-        catch (Exception ex)
-        {
-            // Lazy scammers on the Microsoft Store may reupload without realizing it gets sandboxed, making it unable to start the Notepad process (#1, #12).
-            MessageBox.Show(this,
-                "Couldn't open settings file in Notepad.\n\n" +
-                "This app may have be stolen. If you paid for it, ask for a refund and download it for free from https://github.com/danielchalmers/DesktopClock.\n\n" +
-                $"If it still doesn't work, create a new issue at that link with details on what happened and include this error: \"{ex.Message}\"",
-                Title, MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-    }
-
-    /// <summary>
-    /// Asks the user then creates a new clock executable and starts it.
-    /// </summary>
-    [RelayCommand]
-    public void NewClock()
-    {
-        var result = MessageBox.Show(this,
-            "This will copy the executable and start it with new settings.\n\n" +
-            "Continue?",
-            Title, MessageBoxButton.OKCancel, MessageBoxImage.Question, MessageBoxResult.OK);
-
-        if (result != MessageBoxResult.OK)
-            return;
-
-        var newExePath = Path.Combine(App.MainFileInfo.DirectoryName, App.MainFileInfo.GetFileAtNextIndex().Name);
-
-        // Copy and start the new clock.
-        File.Copy(App.MainFileInfo.FullName, newExePath);
-        Process.Start(newExePath);
+        CurrentTimeOrCountdownString = _dataProvider.GetDisplayText();
+        TryUpdateTextColor();
     }
 
     /// <summary>
@@ -186,7 +71,7 @@ public partial class MainWindow : Window
         Application.Current.Shutdown();
     }
 
-    private void ConfigureTrayIcon(bool showIcon, bool isFirstLaunch)
+    private void ConfigureTrayIcon(bool showIcon)
     {
         if (showIcon)
         {
@@ -199,14 +84,10 @@ public partial class MainWindow : Window
                 _trayIcon.ForceCreate(enablesEfficiencyMode: false);
                 _trayIcon.TrayLeftMouseDoubleClick += (_, _) =>
                 {
-                    WindowState = WindowState.Normal;
-                    Activate();
+                    // Toggle click-through on double-click
+                    Settings.Default.ClickThrough = !Settings.Default.ClickThrough;
                 };
             }
-
-            // Show a notice if the icon was moved during runtime, but not at the start because the user will already expect it.
-            if (!isFirstLaunch)
-                _trayIcon.ShowNotification("Hidden from taskbar", "Icon was moved to the tray");
         }
         else
         {
@@ -222,29 +103,10 @@ public partial class MainWindow : Window
     {
         switch (e.PropertyName)
         {
-            case nameof(Settings.Default.TimeZone):
-                _timeZone = Settings.Default.TimeZoneInfo;
-                UpdateTimeString();
-                break;
-
             case nameof(Settings.Default.Format):
-            case nameof(Settings.Default.CountdownFormat):
-                UpdateTimeString();
-                break;
-
-            case nameof(Settings.Default.ShowInTaskbar):
-                ShowInTaskbar = Settings.Default.ShowInTaskbar;
-                ConfigureTrayIcon(!Settings.Default.ShowInTaskbar, false);
-                break;
-
-            case nameof(Settings.Default.CountdownTo):
-                UpdateTimeString();
-                break;
-
-            case nameof(Settings.Default.WavFilePath):
-            case nameof(Settings.Default.WavFileInterval):
-            case nameof(Settings.Default.PlaySoundOnCountdown):
-                UpdateSoundPlayerEnabled();
+            case nameof(Settings.Default.UseNaturalLanguage):
+                // Update display immediately when format changes
+                CurrentTimeOrCountdownString = _dataProvider.GetDisplayText();
                 break;
 
             case nameof(Settings.Default.ClickThrough):
@@ -265,68 +127,6 @@ public partial class MainWindow : Window
                 Settings.Default.OverrideTextColor = null;
                 break;
         }
-    }
-
-    /// <summary>
-    /// Handles the event when the system clock timer signals a second change.
-    /// </summary>
-    private void SystemClockTimer_SecondChanged(object sender, EventArgs e)
-    {
-        UpdateTimeString();
-
-        TryShiftPixels();
-
-        TryPlaySound();
-
-        TryUpdateTextColor();
-    }
-
-    /// <summary>
-    /// Initializes the sound player for the specified file if enabled; otherwise, sets it to <c>null</c>.
-    /// </summary>
-    private void UpdateSoundPlayerEnabled()
-    {
-        var soundPlayerEnabled =
-            !string.IsNullOrWhiteSpace(Settings.Default.WavFilePath) &&
-            (Settings.Default.WavFileInterval != default || Settings.Default.PlaySoundOnCountdown) &&
-            File.Exists(Settings.Default.WavFilePath);
-
-        _soundPlayer = soundPlayerEnabled ? new(Settings.Default.WavFilePath) : null;
-    }
-
-    /// <summary>
-    /// Tries to play a sound based on the settings if it hits the specified interval and the file exists.
-    /// </summary>
-    private void TryPlaySound()
-    {
-        if (_soundPlayer == null)
-            return;
-
-        if (!DateTimeUtil.IsNowOrCountdownOnInterval(DateTime.Now, Settings.Default.CountdownTo, Settings.Default.WavFileInterval))
-            return;
-
-        try
-        {
-            _soundPlayer.Play();
-        }
-        catch
-        {
-            // Ignore errors because we don't want a sound issue to crash the app.
-        }
-    }
-
-    private void TryShiftPixels()
-    {
-        if (!Settings.Default.BurnInMitigation || DateTimeOffset.Now.Second != 0)
-            return;
-
-        _pixelShifter ??= new();
-
-        Dispatcher.Invoke(() =>
-        {
-            Left += _pixelShifter.ShiftX();
-            Top += _pixelShifter.ShiftY();
-        });
     }
 
     /// <summary>
@@ -362,61 +162,12 @@ public partial class MainWindow : Window
         }
     }
 
-    private void UpdateTimeString()
-    {
-        string GetTimeString()
-        {
-            var timeInSelectedZone = TimeZoneInfo.ConvertTime(DateTimeOffset.Now, _timeZone);
-
-            if (Settings.Default.CountdownTo == default)
-            {
-                if (Settings.Default.UseNaturalLanguage)
-                {
-                    return new NaturalLanguageTimeFormatter(its: true, capitalizeFirst: false, useOClock: true).Format(timeInSelectedZone.DateTime);
-                }
-
-                return Tokenizer.FormatWithTokenizerOrFallBack(timeInSelectedZone, Settings.Default.Format, CultureInfo.DefaultThreadCurrentCulture);
-            }
-            else
-            {
-                if (string.IsNullOrWhiteSpace(Settings.Default.CountdownFormat))
-                    return Settings.Default.CountdownTo.Humanize(utcDate: false, dateToCompareAgainst: DateTime.Now);
-
-                return Tokenizer.FormatWithTokenizerOrFallBack(Settings.Default.CountdownTo - DateTime.Now, Settings.Default.CountdownFormat, CultureInfo.DefaultThreadCurrentCulture);
-            }
-        }
-
-        CurrentTimeOrCountdownString = GetTimeString();
-    }
-
     private void Window_MouseDown(object sender, MouseButtonEventArgs e)
     {
-        // Drag the window to move it.
-        if (e.ChangedButton == MouseButton.Left && Settings.Default.DragToMove)
+        // Drag the window to move it when click-through is disabled.
+        if (e.ChangedButton == MouseButton.Left && !Settings.Default.ClickThrough)
         {
-            // Pause time updates to maintain placement.
-            _systemClockTimer.Stop();
-
             DragMove();
-            UpdateTimeString();
-
-            _systemClockTimer.Start();
-        }
-    }
-
-    private void Window_MouseDoubleClick(object sender, MouseButtonEventArgs e)
-    {
-        CopyToClipboard();
-    }
-
-    private void Window_MouseWheel(object sender, MouseWheelEventArgs e)
-    {
-        // Resize the window when scrolling if the Ctrl key is pressed.
-        if (Keyboard.Modifiers == ModifierKeys.Control)
-        {
-            // Amount of scroll that occurred and whether it was positive or negative.
-            var steps = e.Delta / (double)Mouse.MouseWheelDeltaForOneLine;
-            Settings.Default.ScaleHeight(steps);
         }
     }
 
@@ -424,17 +175,8 @@ public partial class MainWindow : Window
     {
         this.SetPlacement(Settings.Default.Placement);
 
-        UpdateTimeString();
-        _systemClockTimer.Start();
-
-        // Now that everything's been initially rendered and laid out, we can start listening for changes to the size to keep the window right-aligned.
-        SizeChanged += Window_SizeChanged;
-
-        if (Settings.Default.StartHidden)
-        {
-            _trayIcon?.ShowNotification("Started hidden", "Icon is in the tray");
-            this.HideFromScreen();
-        }
+        // Update display text
+        CurrentTimeOrCountdownString = _dataProvider.GetDisplayText();
 
         // Show the window now that it's finished loading.
         Opacity = 1;
@@ -463,6 +205,9 @@ public partial class MainWindow : Window
         Settings.Default.LastDisplay = CurrentTimeOrCountdownString;
         Settings.Default.Placement = this.GetPlacement();
 
+        // Dispose data provider
+        (_dataProvider as IDisposable)?.Dispose();
+
         // Stop the file watcher before saving.
         Settings.Default.Dispose();
 
@@ -472,46 +217,18 @@ public partial class MainWindow : Window
         App.SetRunOnStartup(Settings.Default.RunOnStartup);
     }
 
-    private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
-    {
-        // Adjust the window position for right-alignment.
-        if (e.WidthChanged && Settings.Default.RightAligned)
-        {
-            var widthChange = e.NewSize.Width - e.PreviousSize.Width;
-            Left -= widthChange;
-        }
-    }
-
     private void Window_StateChanged(object sender, EventArgs e)
     {
         if (WindowState == WindowState.Minimized)
         {
             // Save resources while minimized.
-            _systemClockTimer.Stop();
             EfficiencyModeUtilities.SetEfficiencyMode(true);
         }
         else
         {
             // Run like normal without withholding resources.
-            UpdateTimeString();
-            _systemClockTimer.Start();
+            CurrentTimeOrCountdownString = _dataProvider.GetDisplayText();
             EfficiencyModeUtilities.SetEfficiencyMode(false);
-        }
-    }
-
-    private void Window_KeyDown(object sender, KeyEventArgs e)
-    {
-        if (Keyboard.Modifiers == ModifierKeys.Control)
-        {
-            switch (e.Key)
-            {
-                case Key.OemMinus:
-                    Settings.Default.ScaleHeight(-1);
-                    break;
-                case Key.OemPlus:
-                    Settings.Default.ScaleHeight(1);
-                    break;
-            }
         }
     }
 

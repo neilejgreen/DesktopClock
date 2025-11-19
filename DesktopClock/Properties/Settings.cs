@@ -22,9 +22,6 @@ public sealed class Settings : INotifyPropertyChanged, IDisposable
         Error = (_, e) => e.ErrorContext.Handled = true,
     };
 
-    public static readonly double MaxSizeLog = 6.5;
-
-    public static readonly double MinSizeLog = 2.7;
 
     static Settings()
     {
@@ -42,14 +39,9 @@ public sealed class Settings : INotifyPropertyChanged, IDisposable
             EnableRaisingEvents = true,
         };
         _watcher.Changed += FileChanged;
-
-        // Set a random default theme which can be overwritten later when the file loads.
-        Theme = Theme.GetRandomDefaultTheme();
     }
 
-#pragma warning disable CS0067 // The event 'Settings.PropertyChanged' is never used. Handled by Fody.
     public event PropertyChangedEventHandler PropertyChanged;
-#pragma warning restore CS0067
 
     /// <summary>
     /// The singleton instance of the local settings file.
@@ -91,32 +83,38 @@ public sealed class Settings : INotifyPropertyChanged, IDisposable
     public bool UseNaturalLanguage { get; set; } = false;
 
     /// <summary>
-    /// .NET format string for the countdown mode. If left blank, it will be dynamic.
-    /// </summary>
-    /// <remarks>
-    /// See: <see href="https://learn.microsoft.com/en-us/dotnet/standard/base-types/custom-timespan-format-strings">Custom TimeSpan format strings</see>.
-    /// </remarks>
-    public string CountdownFormat { get; set; } = "";
-
-    /// <summary>
-    /// Date and time to countdown to. If left blank, countdown mode is not enabled.
-    /// </summary>
-    public DateTime CountdownTo { get; set; } = default;
-
-    /// <summary>
-    /// A different time zone to be used.
-    /// </summary>
-    public string TimeZone { get; set; } = string.Empty;
-
-    /// <summary>
     /// Font to use for the clock's text.
     /// </summary>
-    public string FontFamily { get; set; } = "Consolas";
+    public string FontFamily
+    {
+        get => _fontFamily;
+        set
+        {
+            if (_fontFamily != value)
+            {
+                _fontFamily = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FontFamily)));
+            }
+        }
+    }
+    private string _fontFamily = "Consolas";
 
     /// <summary>
     /// Style of font to use for the clock's text.
     /// </summary>
-    public string FontStyle { get; set; } = "Normal";
+    public string FontStyle
+    {
+        get => _fontStyle;
+        set
+        {
+            if (_fontStyle != value)
+            {
+                _fontStyle = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FontStyle)));
+            }
+        }
+    }
+    private string _fontStyle = "Normal";
 
     /// <summary>
     /// Text color for the clock's text.
@@ -126,12 +124,14 @@ public sealed class Settings : INotifyPropertyChanged, IDisposable
         get => _textColor;
         set
         {
-            _textColor = value;
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TextColor)));
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(EffectiveTextColor)));
+            if (_textColor != value)
+            {
+                _textColor = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TextColor)));
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(EffectiveTextColor)));
+            }
         }
     }
-
     private Color _textColor;
 
     /// <summary>
@@ -154,11 +154,13 @@ public sealed class Settings : INotifyPropertyChanged, IDisposable
         get => _overrideTextColor;
         set
         {
-            _overrideTextColor = value;
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(EffectiveTextColor)));
+            if (_overrideTextColor != value)
+            {
+                _overrideTextColor = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(EffectiveTextColor)));
+            }
         }
     }
-
     private Color? _overrideTextColor;
 
     /// <summary>
@@ -171,52 +173,53 @@ public sealed class Settings : INotifyPropertyChanged, IDisposable
     /// <summary>
     /// Opacity of the text.
     /// </summary>
-    public double TextOpacity { get; set; } = 1;
-
-    /// <summary>
-    /// The outer color, for either the background or the outline.
-    /// </summary>
-    public Color OuterColor { get; set; }
-
-    /// <summary>
-    /// Shows a solid background instead of an outline.
-    /// </summary>
-    public bool BackgroundEnabled { get; set; } = true;
-
-    /// <summary>
-    /// Opacity of the background.
-    /// </summary>
-    public double BackgroundOpacity { get; set; } = 0.90;
-
-    /// <summary>
-    /// Corner radius of the background.
-    /// </summary>
-    public double BackgroundCornerRadius { get; set; } = 1;
-
-    /// <summary>
-    /// Path to the background image. If left blank, a solid color will be used.
-    /// </summary>
-    public string BackgroundImagePath { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Thickness of the outline around the clock.
-    /// </summary>
-    public double OutlineThickness { get; set; } = 0.2;
+    public double TextOpacity
+    {
+        get => _textOpacity;
+        set
+        {
+            if (_textOpacity != value)
+            {
+                _textOpacity = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TextOpacity)));
+            }
+        }
+    }
+    private double _textOpacity = 1;
 
     /// <summary>
     /// Keeps the clock on top of other windows.
     /// </summary>
-    public bool Topmost { get; set; } = true;
-
-    /// <summary>
-    /// Shows the app icon in the taskbar instead of the tray.
-    /// </summary>
-    public bool ShowInTaskbar { get; set; } = true;
+    public bool Topmost
+    {
+        get => _topmost;
+        set
+        {
+            if (_topmost != value)
+            {
+                _topmost = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Topmost)));
+            }
+        }
+    }
+    private bool _topmost = true;
 
     /// <summary>
     /// Height of the clock window.
     /// </summary>
-    public int Height { get; set; } = 48;
+    public int Height
+    {
+        get => _height;
+        set
+        {
+            if (_height != value)
+            {
+                _height = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Height)));
+            }
+        }
+    }
+    private int _height = 48;
 
     /// <summary>
     /// Opens the app when you log in.
@@ -224,58 +227,22 @@ public sealed class Settings : INotifyPropertyChanged, IDisposable
     public bool RunOnStartup { get; set; } = false;
 
     /// <summary>
-    /// Starts the app hidden until the taskbar or tray icon is clicked.
-    /// </summary>
-    public bool StartHidden { get; set; } = false;
-
-    /// <summary>
-    /// Allows moving the clock by dragging it with the cursor.
-    /// </summary>
-    public bool DragToMove { get; set; } = true;
-
-    /// <summary>
     /// Makes the clock ignore mouse clicks (click-through) so underlying windows receive input.
     /// Also hides the window from Alt+Tab when enabled.
     /// </summary>
-    public bool ClickThrough { get; set; } = false;
-
-    /// <summary>
-    /// Experimental: Keeps the clock window aligned to the right when the size changes.
-    /// </summary>
-    /// <remarks>
-    /// Small glitches can happen because programs are naturally meant to be left-anchored.
-    /// </remarks>
-    public bool RightAligned { get; set; } = false;
-
-    /// <summary>
-    /// Experimental: Shifts the clock periodically in order to reduce screen burn-in.
-    /// </summary>
-    public bool BurnInMitigation { get; set; } = false;
-
-    /// <summary>
-    /// Path to a WAV file to be played on a specified interval.
-    /// </summary>
-    public string WavFilePath { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Interval for playing the WAV file if one is specified and exists (HH:mm:ss).
-    /// </summary>
-    public TimeSpan WavFileInterval { get; set; }
-
-    /// <summary>
-    /// Play the WAV file when the countdown time elapses.
-    /// </summary>
-    public bool PlaySoundOnCountdown { get; set; } = true;
-
-    /// <summary>
-    /// The index of the selected tab in the settings window.
-    /// </summary>
-    public int SettingsTabIndex { get; set; }
-
-    /// <summary>
-    /// Teaching tips that have already been shown to the user.
-    /// </summary>
-    public TeachingTips TipsShown { get; set; }
+    public bool ClickThrough
+    {
+        get => _clickThrough;
+        set
+        {
+            if (_clickThrough != value)
+            {
+                _clickThrough = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ClickThrough)));
+            }
+        }
+    }
+    private bool _clickThrough = true;
 
     /// <summary>
     /// The last text shown on the clock, saved to maintain the dimensions on the next launch.
@@ -286,46 +253,6 @@ public sealed class Settings : INotifyPropertyChanged, IDisposable
     /// Window placement settings to preserve the location of the clock on the screen.
     /// </summary>
     public WindowPlacement Placement { get; set; }
-
-    /// <summary>
-    /// The current theme as a proxy.
-    /// </summary>
-    /// <remarks>
-    /// Ignored during serialization.
-    /// </remarks>
-    [JsonIgnore]
-    public Theme Theme
-    {
-        get => new("Custom", TextColor.ToString(), OuterColor.ToString());
-        set
-        {
-            TextColor = (Color)ColorConverter.ConvertFromString(value.PrimaryColor);
-            OuterColor = (Color)ColorConverter.ConvertFromString(value.SecondaryColor);
-        }
-    }
-
-    /// <summary>
-    /// Proxy for binding to the a timezone.
-    /// </summary>
-    [JsonIgnore]
-    public TimeZoneInfo TimeZoneInfo
-    {
-        get
-        {
-            try
-            {
-                return TimeZoneInfo.FindSystemTimeZoneById(TimeZone);
-            }
-            catch (TimeZoneNotFoundException)
-            {
-                return TimeZoneInfo.Local;
-            }
-        }
-        set
-        {
-            TimeZone = value.Id;
-        }
-    }
 
     #endregion "Properties"
 
@@ -415,19 +342,6 @@ public sealed class Settings : INotifyPropertyChanged, IDisposable
         }
     }
 
-    /// <summary>
-    /// Adjusts the height by a number of steps.
-    /// </summary>
-    public void ScaleHeight(double steps)
-    {
-        // Convert the height, adjust it, then convert back in the same way as the slider.
-        var newHeightLog = Math.Log(Height) + (steps * 0.15);
-        var newHeightLogClamped = Math.Min(Math.Max(newHeightLog, MinSizeLog), MaxSizeLog);
-        var exp = Math.Exp(newHeightLogClamped);
-
-        // Save the new height as an integer to make it easier for the user.
-        Height = (int)exp;
-    }
 
     public void Dispose()
     {
