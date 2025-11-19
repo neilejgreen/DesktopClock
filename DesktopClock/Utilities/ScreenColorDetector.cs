@@ -28,25 +28,14 @@ public static class ScreenColorDetector
     public static Color GetOptimalTextColorWithHue()
     {
         // Get both colors from settings - adapt TextColor, exclude OverrideTextColor from sampling
-        var settings = Properties.Settings.Default;
-        var textColorToAdapt = settings.TextColor;
-        var displayedTextColor = settings.OverrideTextColor ?? settings.TextColor;
-        
+
         Unicolour bgColor = GetAverageColorBehindWindow(Application.Current.MainWindow);
-        Unicolour textColor = textColorToAdapt.ToUnicolour();
+        Unicolour textColor = Properties.Settings.Default.TextColor.ToUnicolour();
         
-        const double targetContrastRatio = 3.0; // WCAG AA large text / WCAG AAA minimum - more balanced for vibrant colors
-
-        // Determine if we need light or dark text
-        bool needLightText = bgColor.RelativeLuminance < 0.5;
-
-        // Try to find the minimum lightness adjustment needed for adequate contrast
-        // while preserving the original hue and saturation
-        var adjustedColor = FindMinimalLightnessForContrast(
+        // Try to find the best lightness for contrast in the middle range
+        var adjustedColor = FindBestLightnessForContrast(
             textColor,
-            bgColor,
-            targetContrastRatio,
-            needLightText);
+            bgColor);
 
         return adjustedColor.ToMediaColor();
     }
@@ -148,58 +137,33 @@ public static class ScreenColorDetector
     }
 
     /// <summary>
-    /// Finds the minimum lightness adjustment needed to achieve target contrast ratio.
-    /// Preserves hue and attempts to preserve saturation when possible.
+    /// Finds the lightness between 0.33 and 0.66 that gives the greatest contrast with the background.
+    /// Preserves hue and saturation.
     /// </summary>
-    private static Unicolour FindMinimalLightnessForContrast(
+    private static Unicolour FindBestLightnessForContrast(
         Unicolour textColor,
-        Unicolour backgroundColor,
-        double targetContrastRatio,
-        bool needLightText)
+        Unicolour backgroundColor)
     {
         var originalHsl = textColor.Hsl;
-        const double SaturationBoostAmount = 0.05; // Very subtle saturation boost to preserve hue
 
-        // Number of binary search iterations for lightness adjustment; 20 provides sufficient precision for color contrast.
-        const int BinarySearchIterations = 20;
+        // Search for the lightness between 0.33 and 0.66 that gives the greatest contrast
+        double bestL = 0.5;
+        double bestContrast = 0.0;
 
-        // If original color already has adequate contrast, return it as-is
-        if (textColor.Contrast(backgroundColor) >= targetContrastRatio)
+        // Sample every 0.01 in the range
+        for (double l = 0.2; l <= 0.8; l += 0.01)
         {
-            return textColor;
-        }
-
-        // If saturation boost alone helps, try that first
-        var saturatedColor = new Unicolour(ColourSpace.Hsl, originalHsl.H, Math.Min(1.0, originalHsl.S + SaturationBoostAmount), originalHsl.L);
-        if (saturatedColor.Contrast(backgroundColor) >= targetContrastRatio)
-        {
-            return saturatedColor;
-        }
-
-        // Only adjust lightness minimally if needed
-        double minL = needLightText ? 0.7 : 0.0;
-        double maxL = needLightText ? 1.0 : 0.3;
-        double bestL = originalHsl.L;
-
-        // Binary search for minimum lightness needed
-        for (var i = 0; i < BinarySearchIterations; i++)
-        {
-            double midL = (minL + maxL) / 2.0;
-            var testColor = new Unicolour(ColourSpace.Hsl, originalHsl.H, Math.Min(1.0, originalHsl.S + SaturationBoostAmount), midL);
+            var testColor = new Unicolour(ColourSpace.Hsl, originalHsl.H, originalHsl.S, l);
             double contrast = testColor.Contrast(backgroundColor);
 
-            if (contrast >= targetContrastRatio)
+            if (contrast > bestContrast)
             {
-                bestL = midL;
-                maxL = midL;
-            }
-            else
-            {
-                minL = midL;
+                bestContrast = contrast;
+                bestL = l;
             }
         }
 
-        return new Unicolour(ColourSpace.Hsl, originalHsl.H, Math.Min(1.0, originalHsl.S + SaturationBoostAmount), bestL);
+        return new Unicolour(ColourSpace.Hsl, originalHsl.H, originalHsl.S, bestL);
     }
 }
 
