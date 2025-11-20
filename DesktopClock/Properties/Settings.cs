@@ -25,16 +25,18 @@ public sealed class Settings : INotifyPropertyChanged, IDisposable
 
     static Settings()
     {
-        // Settings file path from the same directory as the executable.
+        // Settings file path from ~/.config directory.
+        var configDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config");
+        Directory.CreateDirectory(configDir);
         var settingsFileName = Path.GetFileNameWithoutExtension(App.MainFileInfo.FullName) + ".settings";
-        FilePath = Path.Combine(App.MainFileInfo.DirectoryName, settingsFileName);
+        FilePath = Path.Combine(configDir, settingsFileName);
     }
 
     // Private constructor to enforce singleton pattern.
     private Settings()
     {
         // Watch for changes in the settings file.
-        _watcher = new(App.MainFileInfo.DirectoryName, Path.GetFileName(FilePath))
+        _watcher = new(Path.GetDirectoryName(FilePath), Path.GetFileName(FilePath))
         {
             EnableRaisingEvents = true,
         };
