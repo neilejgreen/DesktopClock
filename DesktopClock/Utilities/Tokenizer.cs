@@ -1,11 +1,11 @@
-﻿using System;
+using System;
 using System.Text.RegularExpressions;
 
-namespace DesktopClock;
+namespace DesktopClock.Utilities;
 
 public static class Tokenizer
 {
-    private static readonly Regex _tokenizerRegex = new("{([^{}]+)}", RegexOptions.Compiled);
+    private static readonly Regex _tokenizerRegex = new( "{([^{}]+)}", RegexOptions.Compiled );
 
     /// <summary>
     /// <para>Returns a string formatted using a tokenized format or the default formatting method.</para>
@@ -14,23 +14,22 @@ public static class Tokenizer
     /// <param name="formattable">The object to format.</param>
     /// <param name="format">The format to use.</param>
     /// <param name="formatProvider">The format provider.</param>
-    public static string FormatWithTokenizerOrFallBack(IFormattable formattable, string format, IFormatProvider formatProvider)
+    public static string FormatWithTokenizerOrFallBack( IFormattable formattable, string format, IFormatProvider formatProvider )
     {
-        if (!string.IsNullOrWhiteSpace(format))
+        if ( !string.IsNullOrWhiteSpace( format ) )
         {
             try
             {
-                if (format.Contains("}"))
+                if ( format.Contains( "}" ) )
                 {
-                    return _tokenizerRegex.Replace(format, (m) =>
-                    {
-                        var formatString = m.Value.Replace("{", "").Replace("}", "");
-                        return formattable.ToString(formatString, formatProvider);
-                    });
+                    return _tokenizerRegex.Replace( format, ( m ) => {
+                        var formatString = m.Value.Replace( "{", "" ).Replace( "}", "" );
+                        return formattable.ToString( formatString, formatProvider );
+                    } );
                 }
 
                 // Use basic formatter if no special formatting tokens are present.
-                return formattable.ToString(format, formatProvider);
+                return formattable.ToString( format, formatProvider );
             }
             catch
             {

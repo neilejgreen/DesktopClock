@@ -20,7 +20,7 @@ public class ClockDataProvider : IDataProvider, IDisposable
     public ClockDataProvider()
     {
         _systemClockTimer = new SystemClockTimer();
-        _systemClockTimer.SecondChanged += (s, e) => DataChanged?.Invoke(this, EventArgs.Empty);
+        _systemClockTimer.SecondChanged += ( s, e ) => DataChanged?.Invoke( this, EventArgs.Empty );
         _systemClockTimer.Start();
     }
 
@@ -31,12 +31,12 @@ public class ClockDataProvider : IDataProvider, IDisposable
     {
         var now = DateTimeOffset.Now;
 
-        if (Settings.Default.UseNaturalLanguage)
+        if ( Settings.Default.UseNaturalLanguage )
         {
-            return new NaturalLanguageTimeFormatter(its: true, capitalizeFirst: false, useOClock: true).Format(now.DateTime);
+            return new NaturalLanguageTimeFormatter( its: true, capitalizeFirst: false, useOClock: true ).Format( now.DateTime );
         }
 
-        return Tokenizer.FormatWithTokenizerOrFallBack(now, Settings.Default.Format, CultureInfo.DefaultThreadCurrentCulture);
+        return Tokenizer.FormatWithTokenizerOrFallBack( now, Settings.Default.Format, CultureInfo.DefaultThreadCurrentCulture );
     }
 
     public void Dispose()

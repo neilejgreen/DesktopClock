@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.IO;
 using System.Windows.Media;
@@ -11,33 +11,31 @@ public sealed class Settings : INotifyPropertyChanged, IDisposable
 {
     private readonly FileSystemWatcher _watcher;
 
-    private static readonly Lazy<Settings> _default = new(LoadAndAttemptSave);
+    private static readonly Lazy<Settings> _default = new( LoadAndAttemptSave );
 
-    private static readonly JsonSerializerSettings _jsonSerializerSettings = new()
-    {
+    private static readonly JsonSerializerSettings _jsonSerializerSettings = new() {
         // Make it easier to read by a human.
         Formatting = Formatting.Indented,
 
         // Prevent a single error from taking down the whole file.
-        Error = (_, e) => e.ErrorContext.Handled = true,
+        Error = ( _, e ) => e.ErrorContext.Handled = true,
     };
 
 
     static Settings()
     {
         // Settings file path from ~/.config directory.
-        var configDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config");
-        Directory.CreateDirectory(configDir);
-        var settingsFileName = Path.GetFileNameWithoutExtension(App.MainFileInfo.FullName) + ".settings";
-        FilePath = Path.Combine(configDir, settingsFileName);
+        var configDir = Path.Combine( Environment.GetFolderPath( Environment.SpecialFolder.UserProfile ), ".config" );
+        Directory.CreateDirectory( configDir );
+        var settingsFileName = Path.GetFileNameWithoutExtension( App.MainFileInfo.FullName ) + ".settings";
+        FilePath = Path.Combine( configDir, settingsFileName );
     }
 
     // Private constructor to enforce singleton pattern.
     private Settings()
     {
         // Watch for changes in the settings file.
-        _watcher = new(Path.GetDirectoryName(FilePath), Path.GetFileName(FilePath))
-        {
+        _watcher = new( Path.GetDirectoryName( FilePath ), Path.GetFileName( FilePath ) ) {
             EnableRaisingEvents = true,
         };
         _watcher.Changed += FileChanged;
@@ -66,7 +64,7 @@ public sealed class Settings : INotifyPropertyChanged, IDisposable
     /// <summary>
     /// Checks if the settings file exists on the disk.
     /// </summary>
-    public static bool Exists => File.Exists(FilePath);
+    public static bool Exists => File.Exists( FilePath );
 
     #region "Properties"
 
@@ -89,34 +87,32 @@ public sealed class Settings : INotifyPropertyChanged, IDisposable
     /// </summary>
     public string FontFamily
     {
-        get => _fontFamily;
+        get;
         set
         {
-            if (_fontFamily != value)
+            if ( field != value )
             {
-                _fontFamily = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FontFamily)));
+                field = value;
+                PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( nameof( FontFamily ) ) );
             }
         }
-    }
-    private string _fontFamily = "Consolas";
+    } = "Consolas";
 
     /// <summary>
     /// Style of font to use for the clock's text.
     /// </summary>
     public string FontStyle
     {
-        get => _fontStyle;
+        get;
         set
         {
-            if (_fontStyle != value)
+            if ( field != value )
             {
-                _fontStyle = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FontStyle)));
+                field = value;
+                PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( nameof( FontStyle ) ) );
             }
         }
-    }
-    private string _fontStyle = "Normal";
+    } = "Normal";
 
     /// <summary>
     /// Text color for the clock's text.
@@ -126,11 +122,11 @@ public sealed class Settings : INotifyPropertyChanged, IDisposable
         get => _textColor;
         set
         {
-            if (_textColor != value)
+            if ( _textColor != value )
             {
                 _textColor = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TextColor)));
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(EffectiveTextColor)));
+                PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( nameof( TextColor ) ) );
+                PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( nameof( EffectiveTextColor ) ) );
             }
         }
     }
@@ -156,10 +152,10 @@ public sealed class Settings : INotifyPropertyChanged, IDisposable
         get => _overrideTextColor;
         set
         {
-            if (_overrideTextColor != value)
+            if ( _overrideTextColor != value )
             {
                 _overrideTextColor = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(EffectiveTextColor)));
+                PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( nameof( EffectiveTextColor ) ) );
             }
         }
     }
@@ -177,51 +173,48 @@ public sealed class Settings : INotifyPropertyChanged, IDisposable
     /// </summary>
     public double TextOpacity
     {
-        get => _textOpacity;
+        get;
         set
         {
-            if (_textOpacity != value)
+            if ( field != value )
             {
-                _textOpacity = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TextOpacity)));
+                field = value;
+                PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( nameof( TextOpacity ) ) );
             }
         }
-    }
-    private double _textOpacity = 1;
+    } = 1;
 
     /// <summary>
     /// Keeps the clock on top of other windows.
     /// </summary>
     public bool Topmost
     {
-        get => _topmost;
+        get;
         set
         {
-            if (_topmost != value)
+            if ( field != value )
             {
-                _topmost = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Topmost)));
+                field = value;
+                PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( nameof( Topmost ) ) );
             }
         }
-    }
-    private bool _topmost = true;
+    } = true;
 
     /// <summary>
     /// Height of the clock window.
     /// </summary>
     public int Height
     {
-        get => _height;
+        get;
         set
         {
-            if (_height != value)
+            if ( field != value )
             {
-                _height = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Height)));
+                field = value;
+                PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( nameof( Height ) ) );
             }
         }
-    }
-    private int _height = 48;
+    } = 48;
 
     /// <summary>
     /// Opens the app when you log in.
@@ -234,17 +227,16 @@ public sealed class Settings : INotifyPropertyChanged, IDisposable
     /// </summary>
     public bool ClickThrough
     {
-        get => _clickThrough;
+        get;
         set
         {
-            if (_clickThrough != value)
+            if ( field != value )
             {
-                _clickThrough = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ClickThrough)));
+                field = value;
+                PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( nameof( ClickThrough ) ) );
             }
         }
-    }
-    private bool _clickThrough = true;
+    } = true;
 
     /// <summary>
     /// The last text shown on the clock, saved to maintain the dimensions on the next launch.
@@ -265,24 +257,24 @@ public sealed class Settings : INotifyPropertyChanged, IDisposable
     {
         try
         {
-            var json = JsonConvert.SerializeObject(this, _jsonSerializerSettings);
+            var json = JsonConvert.SerializeObject( this, _jsonSerializerSettings );
 
             // Attempt to save multiple times.
-            for (var i = 0; i < 4; i++)
+            for ( var i = 0; i < 4; i++ )
             {
                 try
                 {
-                    File.WriteAllText(FilePath, json);
+                    File.WriteAllText( FilePath, json );
                     return true;
                 }
                 catch
                 {
                     // Wait before next attempt to read.
-                    System.Threading.Thread.Sleep(250);
+                    System.Threading.Thread.Sleep( 250 );
                 }
             }
         }
-        catch (JsonSerializationException)
+        catch ( JsonSerializationException )
         {
         }
 
@@ -292,13 +284,13 @@ public sealed class Settings : INotifyPropertyChanged, IDisposable
     /// <summary>
     /// Populates the given settings with values from the default path.
     /// </summary>
-    private static void Populate(Settings settings)
+    private static void Populate( Settings settings )
     {
-        using var fileStream = new FileStream(FilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-        using var streamReader = new StreamReader(fileStream);
-        using var jsonReader = new JsonTextReader(streamReader);
+        using var fileStream = new FileStream( FilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite );
+        using var streamReader = new StreamReader( fileStream );
+        using var jsonReader = new JsonTextReader( streamReader );
 
-        JsonSerializer.Create(_jsonSerializerSettings).Populate(jsonReader, settings);
+        JsonSerializer.Create( _jsonSerializerSettings ).Populate( jsonReader, settings );
     }
 
     /// <summary>
@@ -309,7 +301,7 @@ public sealed class Settings : INotifyPropertyChanged, IDisposable
         try
         {
             var settings = new Settings();
-            Populate(settings);
+            Populate( settings );
             return settings;
         }
         catch
@@ -333,11 +325,11 @@ public sealed class Settings : INotifyPropertyChanged, IDisposable
     /// <summary>
     /// Occurs after the watcher detects a change in the settings file.
     /// </summary>
-    private void FileChanged(object sender, FileSystemEventArgs e)
+    private void FileChanged( object sender, FileSystemEventArgs e )
     {
         try
         {
-            Populate(this);
+            Populate( this );
         }
         catch
         {

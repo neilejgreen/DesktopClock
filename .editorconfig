@@ -290,8 +290,8 @@ dotnet_naming_symbols.instance_fields.applicable_kinds = field
 
 dotnet_naming_style.instance_field_style.capitalization = camel_case
 
- # Good to have but too much of a departure from what Data Platform currently use
-# dotnet_naming_style.instance_field_style.required_prefix = _ 
+# Good to have but too much of a departure from what Data Platform currently use
+dotnet_naming_style.instance_field_style.required_prefix = _ 
 
 # Locals and parameters are camelCase
 dotnet_naming_rule.locals_should_be_camel_case.severity = warning

@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Globalization;
+using DesktopClock.Utilities;
 
 namespace DesktopClock.Tests;
 
@@ -8,20 +9,20 @@ public class TokenizerTests
     [Fact]
     public void FormatWithTokenizer()
     {
-        var dateTime = new DateTime(2023, 09, 24, 12, 13, 14);
+        var dateTime = new DateTime( 2023, 09, 24, 12, 13, 14 );
         var format = "{dddd}, {MMM dd}, {HH:mm:ss}";
-        var result = Tokenizer.FormatWithTokenizerOrFallBack(dateTime, format, CultureInfo.InvariantCulture);
+        var result = Tokenizer.FormatWithTokenizerOrFallBack( dateTime, format, CultureInfo.InvariantCulture );
 
-        Assert.Equal("Sunday, Sep 24, 12:13:14", result);
+        Assert.Equal( "Sunday, Sep 24, 12:13:14", result );
     }
 
     [Fact]
     public void FormatWithFallback()
     {
-        var dateTime = new DateTime(2023, 09, 24, 12, 13, 14);
+        var dateTime = new DateTime( 2023, 09, 24, 12, 13, 14 );
         var format = "dddd, MMM dd, HH:mm:ss";
-        var result = Tokenizer.FormatWithTokenizerOrFallBack(dateTime, format, CultureInfo.InvariantCulture);
+        var result = Tokenizer.FormatWithTokenizerOrFallBack( dateTime, format, CultureInfo.InvariantCulture );
 
-        Assert.Equal("Sunday, Sep 24, 12:13:14", result);
+        Assert.Equal( "Sunday, Sep 24, 12:13:14", result );
     }
 }

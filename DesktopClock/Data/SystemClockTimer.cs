@@ -1,7 +1,7 @@
-﻿using System;
+using System;
 using System.Threading;
 
-namespace DesktopClock;
+namespace DesktopClock.Data;
 
 /// <summary>
 /// A timer that syncs with the system clock.
@@ -12,7 +12,7 @@ public sealed class SystemClockTimer : IDisposable
 
     public SystemClockTimer()
     {
-        _timer = new Timer(_ => OnTick());
+        _timer = new Timer( _ => OnTick() );
     }
 
     /// <summary>
@@ -38,18 +38,18 @@ public sealed class SystemClockTimer : IDisposable
     /// <summary>
     /// Immediately stops the timer.
     /// </summary>
-    public void Stop() => _timer.Change(Timeout.Infinite, Timeout.Infinite);
+    public void Stop() => _timer.Change( Timeout.Infinite, Timeout.Infinite );
 
     private void OnTick()
     {
         ScheduleTickForNextSecond();
 
-        SecondChanged?.Invoke(this, EventArgs.Empty);
+        SecondChanged?.Invoke( this, EventArgs.Empty );
     }
 
     /// <summary>
     /// Starts the timer and schedules the tick for the next second on the system clock.
     /// </summary>
     private void ScheduleTickForNextSecond() =>
-        _timer.Change(MillisecondsUntilNextSecond, Timeout.Infinite);
+        _timer.Change( MillisecondsUntilNextSecond, Timeout.Infinite );
 }

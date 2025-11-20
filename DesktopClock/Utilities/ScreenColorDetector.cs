@@ -1,10 +1,6 @@
-using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Windows;
-using System.Windows.Interop;
-using System.Windows.Media;
 using Wacton.Unicolour;
 using Color = System.Windows.Media.Color;
 using Point = System.Windows.Point;
@@ -16,7 +12,7 @@ namespace DesktopClock.Utilities;
 /// </summary>
 public static class ScreenColorDetector
 {
-    private static readonly Unicolour Black = new(ColourSpace.Rgb255, 0, 0, 0);
+    private static Unicolour Black { get; } = new( ColourSpace.Rgb255, 0, 0, 0 );
 
     /// <summary>
     /// Gets the optimal text color by adjusting the lightness of the current text color
@@ -29,13 +25,13 @@ public static class ScreenColorDetector
     {
         // Get both colors from settings - adapt TextColor, exclude OverrideTextColor from sampling
 
-        Unicolour bgColor = GetAverageColorBehindWindow(Application.Current.MainWindow);
+        Unicolour bgColor = GetAverageColorBehindWindow( Application.Current.MainWindow );
         Unicolour textColor = Properties.Settings.Default.TextColor.ToUnicolour();
-        
+
         // Try to find the best lightness for contrast in the middle range
         var adjustedColor = FindBestLightnessForContrast(
             textColor,
-            bgColor);
+            bgColor );
 
         return adjustedColor.ToMediaColor();
     }
@@ -45,22 +41,26 @@ public static class ScreenColorDetector
     /// </summary>
     /// <param name="window">The WPF window to analyze behind.</param>
     /// <returns>The average color behind the window as a Unicolour, or black if capture fails.</returns>
-    private static Unicolour GetAverageColorBehindWindow(Window window)
+    private static Unicolour GetAverageColorBehindWindow( Window window )
     {
         try
         {
             // Get window bounds in screen coordinates
-            var windowBounds = GetWindowBounds(window);
-            if (windowBounds.Width <= 0 || windowBounds.Height <= 0)
+            var windowBounds = GetWindowBounds( window );
+            if ( windowBounds.Width <= 0 || windowBounds.Height <= 0 )
+            {
                 return Black;
+            }
 
             // Capture screen behind window
-            using var bitmap = CaptureScreenRegion(windowBounds);
-            if (bitmap == null)
+            using var bitmap = CaptureScreenRegion( windowBounds );
+            if ( bitmap == null )
+            {
                 return Black;
+            }
 
             // Calculate average color from border pixels only
-            return CalculateAverageColor(bitmap);
+            return CalculateAverageColor( bitmap );
         }
         catch
         {
@@ -71,30 +71,30 @@ public static class ScreenColorDetector
     /// <summary>
     /// Gets the bounds of a WPF window in screen coordinates.
     /// </summary>
-    private static Rectangle GetWindowBounds(Window window)
-{
-    // Convert window corners to screen coordinates
-    var topLeft = window.PointToScreen(new Point(0, 0));
-    var bottomRight = window.PointToScreen(new Point(window.ActualWidth, window.ActualHeight));
+    private static Rectangle GetWindowBounds( Window window )
+    {
+        // Convert window corners to screen coordinates
+        var topLeft = window.PointToScreen( new Point( 0, 0 ) );
+        var bottomRight = window.PointToScreen( new Point( window.ActualWidth, window.ActualHeight ) );
 
-    return new Rectangle(
-        (int)topLeft.X,
-        (int)topLeft.Y,
-        (int)(bottomRight.X - topLeft.X),
-        (int)(bottomRight.Y - topLeft.Y));
-}
+        return new Rectangle(
+            (int) topLeft.X,
+            (int) topLeft.Y,
+            (int) ( bottomRight.X - topLeft.X ),
+            (int) ( bottomRight.Y - topLeft.Y ) );
+    }
 
     /// <summary>
     /// Captures a region of the screen using Graphics.CopyFromScreen.
     /// </summary>
-    private static Bitmap CaptureScreenRegion(Rectangle bounds)
+    private static Bitmap CaptureScreenRegion( Rectangle bounds )
     {
         try
         {
-            var bitmap = new Bitmap(bounds.Width, bounds.Height);
-            using (var graphics = Graphics.FromImage(bitmap))
+            var bitmap = new Bitmap( bounds.Width, bounds.Height );
+            using ( var graphics = Graphics.FromImage( bitmap ) )
             {
-                graphics.CopyFromScreen(bounds.Left, bounds.Top, 0, 0, bounds.Size);
+                graphics.CopyFromScreen( bounds.Left, bounds.Top, 0, 0, bounds.Size );
             }
             return bitmap;
         }
@@ -107,11 +107,11 @@ public static class ScreenColorDetector
     /// <summary>
     /// Calculates the average color from the 2px border pixels around the bitmap edges.
     /// </summary>
-    private static Unicolour CalculateAverageColor(Bitmap bitmap)
+    private static Unicolour CalculateAverageColor( Bitmap bitmap )
     {
         int width = bitmap.Width;
         int height = bitmap.Height;
-        
+
         (int x, int y)[] pixels = [
             // top and bottom rows
             .. from x in Enumerable.Range(0, width)
@@ -123,17 +123,19 @@ public static class ScreenColorDetector
                select (x, y)
         ];
 
-        if (pixels.Length == 0)
+        if ( pixels.Length == 0 )
+        {
             return Black;
+        }
 
-        System.Drawing.Color[] colors = [..pixels.Select(pixel => bitmap.GetPixel(pixel.x, pixel.y))];
+        System.Drawing.Color[] colors = [ .. pixels.Select( pixel => bitmap.GetPixel( pixel.x, pixel.y ) ) ];
 
         byte
-            avgR = (byte)colors.Select(c => (decimal)c.R).Average(),
-            avgG = (byte)colors.Select(c => (decimal)c.G).Average(),
-            avgB = (byte)colors.Select(c => (decimal)c.B).Average();
+            avgR = (byte) colors.Average( c => (decimal) c.R ),
+            avgG = (byte) colors.Average( c => (decimal) c.G ),
+            avgB = (byte) colors.Average( c => (decimal) c.B );
 
-        return new Unicolour(ColourSpace.Rgb255, avgR, avgG, avgB);
+        return new Unicolour( ColourSpace.Rgb255, avgR, avgG, avgB );
     }
 
     /// <summary>
@@ -142,7 +144,7 @@ public static class ScreenColorDetector
     /// </summary>
     private static Unicolour FindBestLightnessForContrast(
         Unicolour textColor,
-        Unicolour backgroundColor)
+        Unicolour backgroundColor )
     {
         var originalHsl = textColor.Hsl;
 
@@ -151,19 +153,19 @@ public static class ScreenColorDetector
         double bestContrast = 0.0;
 
         // Sample every 0.01 in the range
-        for (double l = 0.2; l <= 0.8; l += 0.01)
+        for ( double l = 0.2; l <= 0.8; l += 0.01 )
         {
-            var testColor = new Unicolour(ColourSpace.Hsl, originalHsl.H, originalHsl.S, l);
-            double contrast = testColor.Contrast(backgroundColor);
+            var testColor = new Unicolour( ColourSpace.Hsl, originalHsl.H, originalHsl.S, l );
+            double contrast = testColor.Contrast( backgroundColor );
 
-            if (contrast > bestContrast)
+            if ( contrast > bestContrast )
             {
                 bestContrast = contrast;
                 bestL = l;
             }
         }
 
-        return new Unicolour(ColourSpace.Hsl, originalHsl.H, originalHsl.S, bestL);
+        return new Unicolour( ColourSpace.Hsl, originalHsl.H, originalHsl.S, bestL );
     }
 }
 
@@ -177,9 +179,9 @@ internal static class ColorExtensions
     /// </summary>
     /// <param name="color">The WPF Color to convert.</param>
     /// <returns>A Unicolour representation of the color.</returns>
-    internal static Unicolour ToUnicolour(this Color color)
+    internal static Unicolour ToUnicolour( this Color color )
     {
-        return new Unicolour(ColourSpace.Rgb255, color.R, color.G, color.B);
+        return new Unicolour( ColourSpace.Rgb255, color.R, color.G, color.B );
     }
 
     /// <summary>
@@ -187,9 +189,9 @@ internal static class ColorExtensions
     /// </summary>
     /// <param name="unicolour">The Unicolour to convert.</param>
     /// <returns>A WPF Color representation of the color.</returns>
-    internal static Color ToMediaColor(this Unicolour unicolour)
+    internal static Color ToMediaColor( this Unicolour unicolour )
     {
         Rgb255 rgb = unicolour.Rgb.Byte255;
-        return Color.FromRgb((byte)rgb.R, (byte)rgb.G, (byte)rgb.B);
+        return Color.FromRgb( (byte) rgb.R, (byte) rgb.G, (byte) rgb.B );
     }
 }
