@@ -225,13 +225,19 @@ public partial class MainWindow : Window
         if ( WindowState == WindowState.Minimized )
         {
             // Save resources while minimized.
-            EfficiencyModeUtilities.SetEfficiencyMode( true );
+            if ( OperatingSystem.IsWindowsVersionAtLeast( 10, 0, 16299 ) )
+            {
+                EfficiencyModeUtilities.SetEfficiencyMode( true );
+            }
         }
         else
         {
             // Run like normal without withholding resources.
             CurrentTimeOrCountdownString = _dataProvider.GetDisplayText();
-            EfficiencyModeUtilities.SetEfficiencyMode( false );
+            if ( OperatingSystem.IsWindowsVersionAtLeast( 10, 0, 16299 ) )
+            {
+                EfficiencyModeUtilities.SetEfficiencyMode( false );
+            }
         }
     }
 
