@@ -1,5 +1,3 @@
-using System;
-
 namespace DesktopClock.Utilities;
 
 /// <summary>

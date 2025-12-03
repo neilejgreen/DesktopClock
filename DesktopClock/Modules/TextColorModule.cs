@@ -1,5 +1,3 @@
-using System;
-using System.Threading.Tasks;
 using DesktopClock.Properties;
 using DesktopClock.Utilities;
 

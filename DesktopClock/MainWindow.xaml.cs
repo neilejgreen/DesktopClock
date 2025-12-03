@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -27,7 +25,6 @@ public partial class MainWindow : Window
         new TextColorModule()
         ];
     private TaskbarIcon _trayIcon;
-    private int _autoColorUpdateCounter;
 
     /// <summary>
     /// The current date and time as a formatted string.

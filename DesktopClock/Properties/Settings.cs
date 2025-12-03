@@ -1,4 +1,3 @@
-using System;
 using System.ComponentModel;
 using System.IO;
 using System.Windows.Media;
@@ -270,7 +269,7 @@ public sealed class Settings : INotifyPropertyChanged, IDisposable
                 catch
                 {
                     // Wait before next attempt to read.
-                    System.Threading.Thread.Sleep( 250 );
+                    Thread.Sleep( 250 );
                 }
             }
         }
