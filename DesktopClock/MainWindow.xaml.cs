@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -7,12 +8,11 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using DesktopClock.Data;
+using DesktopClock.Modules;
 using DesktopClock.Properties;
 using H.NotifyIcon;
 using H.NotifyIcon.EfficiencyMode;
 using WpfWindowPlacement;
-using static DesktopClock.Utilities.ScreenColorDetector;
 
 namespace DesktopClock;
 
@@ -22,7 +22,10 @@ namespace DesktopClock;
 [ObservableObject]
 public partial class MainWindow : Window
 {
-    private readonly IDataProvider _dataProvider;
+    private readonly List<IWindowModule> _modules = [
+        new ClockModule(),
+        new TextColorModule()
+        ];
     private TaskbarIcon _trayIcon;
     private int _autoColorUpdateCounter;
 
@@ -42,12 +45,8 @@ public partial class MainWindow : Window
         // Always hide from taskbar, use tray only
         ShowInTaskbar = false;
 
-        // Initialize data provider
-        _dataProvider = new ClockDataProvider();
-        _dataProvider.DataChanged += ( s, e ) => Dispatcher.Invoke( () => OnDataProviderDataChanged() );
-
-        // Restore the structure of the last state using the display text.
-        CurrentTimeOrCountdownString = Settings.Default.LastDisplay ?? _dataProvider.GetDisplayText();
+        // Initialize modules
+        InitializeModules();
 
         // The context menu is shared between right-clicking the window and the tray icon.
         ContextMenu = Resources[ "MainContextMenu" ] as ContextMenu;
@@ -55,11 +54,8 @@ public partial class MainWindow : Window
         ConfigureTrayIcon( true );
     }
 
-    private void OnDataProviderDataChanged()
-    {
-        CurrentTimeOrCountdownString = _dataProvider.GetDisplayText();
-        TryUpdateTextColor();
-    }
+    private void InitializeModules() =>
+        _modules.ForEach( module => module.Initialize( this ) );
 
     /// <summary>
     /// Closes the app.
@@ -101,65 +97,15 @@ public partial class MainWindow : Window
     {
         switch ( e.PropertyName )
         {
-            case nameof( Settings.Default.Format ):
-            case nameof( Settings.Default.UseNaturalLanguage ):
-                // Update display immediately when format changes
-                CurrentTimeOrCountdownString = _dataProvider.GetDisplayText();
-                break;
 
             case nameof( Settings.Default.ClickThrough ):
                 ApplyClickThrough();
-                break;
-
-            case nameof( Settings.Default.AutoAdjustTextColor ):
-                // Clear override when auto-adjustment is disabled
-                if ( !Settings.Default.AutoAdjustTextColor )
-                {
-                    Settings.Default.OverrideTextColor = null;
-                    _autoColorUpdateCounter = 0; // Reset counter
-                }
                 break;
 
             case nameof( Settings.Default.TextColor ):
                 // Clear override when base text color changes (so new lightness is immediately visible)
                 Settings.Default.OverrideTextColor = null;
                 break;
-        }
-    }
-
-    /// <summary>
-    /// Tries to update the text lightness based on the background behind the clock if auto adjustment is enabled.
-    /// </summary>
-    private void TryUpdateTextColor()
-    {
-        if ( !Settings.Default.AutoAdjustTextColor )
-        {
-            return;
-        }
-
-        // Only update at the specified interval to avoid performance issues
-        _autoColorUpdateCounter++;
-        if ( _autoColorUpdateCounter < Settings.Default.AutoColorUpdateInterval )
-        {
-            return;
-        }
-
-        _autoColorUpdateCounter = 0;
-
-        try
-        {
-            // Run color detection on dispatcher to ensure we have window bounds
-            Dispatcher.Invoke( () => {
-                // Adjust the current text color to contrast with the background
-                var optimalTextColor = GetOptimalTextColorWithHue();
-
-                // Update the override text color without modifying the saved setting
-                Settings.Default.OverrideTextColor = optimalTextColor;
-            } );
-        }
-        catch
-        {
-            // Ignore errors to prevent crashes from screen capture issues
         }
     }
 
@@ -176,8 +122,6 @@ public partial class MainWindow : Window
     {
         this.SetPlacement( Settings.Default.Placement );
 
-        // Update display text
-        CurrentTimeOrCountdownString = _dataProvider.GetDisplayText();
 
         // Show the window now that it's finished loading.
         Opacity = 1;
@@ -206,8 +150,8 @@ public partial class MainWindow : Window
         Settings.Default.LastDisplay = CurrentTimeOrCountdownString;
         Settings.Default.Placement = this.GetPlacement();
 
-        // Dispose data provider
-        ( _dataProvider as IDisposable )?.Dispose();
+        // Dispose all modules
+        _modules.ForEach( module => module.Dispose() );
 
         // Stop the file watcher before saving.
         Settings.Default.Dispose();
@@ -233,7 +177,6 @@ public partial class MainWindow : Window
         else
         {
             // Run like normal without withholding resources.
-            CurrentTimeOrCountdownString = _dataProvider.GetDisplayText();
             if ( OperatingSystem.IsWindowsVersionAtLeast( 10, 0, 16299 ) )
             {
                 EfficiencyModeUtilities.SetEfficiencyMode( false );
