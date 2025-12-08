@@ -22,7 +22,8 @@ public partial class MainWindow : Window
 {
     private readonly List<IWindowModule> _modules = [
         new ClockModule(),
-        new TextColorModule()
+        new TextColorModule(),
+        new OutlookMeetingBackgroundModule()
         ];
     private TaskbarIcon _trayIcon;
 
@@ -58,10 +59,7 @@ public partial class MainWindow : Window
     /// Closes the app.
     /// </summary>
     [RelayCommand]
-    public void Exit()
-    {
-        Application.Current.Shutdown();
-    }
+    public void Exit() => Application.Current.Shutdown();
 
     private void ConfigureTrayIcon( bool showIcon )
     {

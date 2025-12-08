@@ -12,11 +12,11 @@ New-Item -ItemType Directory -Path $toolsDir -Force | Out-Null
 
 
 # Run publish and capture output only if it fails
-$null = dotnet publish .\DesktopClock\DesktopClock.csproj -o $toolsDir -c Release -r win-x64
+$null = msbuild publish .\DesktopClock\DesktopClock.csproj -o $toolsDir -c Release -r win-x64
 if ($LASTEXITCODE -ne 0) {
     "🏗️👎🏻"
     # Rerun to show error output with color
-    dotnet publish .\DesktopClock\DesktopClock.csproj -o $toolsDir -c Release -r win-x64
+    msbuild publish .\DesktopClock\DesktopClock.csproj -o $toolsDir -c Release -r win-x64
     exit 1
 }
 

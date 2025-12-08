@@ -247,6 +247,46 @@ public sealed class Settings : INotifyPropertyChanged, IDisposable
     /// </summary>
     public WindowPlacement Placement { get; set; }
 
+    public Color OutlookMeetingBackgroundColor
+    {
+        get;
+        set
+        {
+            if ( field != value )
+            {
+                field = value;
+                PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( nameof( OutlookMeetingBackgroundColor ) ) );
+            }
+        }
+    }
+
+    public int OutlookMeetingLookAheadMinutes { get; set; }
+
+    /// <summary>
+    /// Override background color. When null, background is transparent.
+    /// This field is not serialized.
+    /// </summary>
+    [JsonIgnore]
+    public Color? OverrideBackgroundColor
+    {
+        get => _overrideBackgroundColor;
+        set
+        {
+            if ( _overrideBackgroundColor != value )
+            {
+                _overrideBackgroundColor = value;
+                PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( nameof( EffectiveBackgroundColor ) ) );
+            }
+        }
+    }
+    private Color? _overrideBackgroundColor;
+
+    /// <summary>
+    /// The actual background color to display. Returns OverrideBackgroundColor if set, otherwise OutlookMeetingBackgroundColor.
+    /// This property is read-only and computed.
+    /// </summary>
+    [JsonIgnore]
+    public Color EffectiveBackgroundColor => OverrideBackgroundColor ?? Colors.Transparent;
     #endregion "Properties"
 
     /// <summary>

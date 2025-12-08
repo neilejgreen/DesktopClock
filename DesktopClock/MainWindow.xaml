@@ -10,7 +10,6 @@
         mc:Ignorable="d"
         Title="DesktopClock"
         AllowsTransparency="True"
-        Background="Transparent"
         WindowStyle="None"
         ResizeMode="NoResize"
         SizeToContent="WidthAndHeight"
@@ -23,6 +22,10 @@
         ContentRendered="Window_ContentRendered"
         Closing="Window_Closing"
         StateChanged="Window_StateChanged">
+    <Window.Background>
+        <SolidColorBrush Color="{Binding EffectiveBackgroundColor, Source={x:Static p:Settings.Default}, Mode=OneWay}" />
+    </Window.Background>
+
     <Window.Resources>
         <ContextMenu x:Key="MainContextMenu"
                      x:Shared="False">
