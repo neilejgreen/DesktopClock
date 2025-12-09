@@ -117,10 +117,6 @@ public partial class MainWindow : Window
     {
         this.SetPlacement( Settings.Default.Placement );
 
-
-        // Show the window now that it's finished loading.
-        Opacity = 1;
-
         // Make window click-through if enabled.
         ApplyClickThrough();
     }

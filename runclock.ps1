@@ -5,18 +5,23 @@ if( $clockProc ){
     $clockProc | Stop-Process
 }
  
-
 # Publish to ~/tools
 $toolsDir = Join-Path $env:USERPROFILE "tools"
 New-Item -ItemType Directory -Path $toolsDir -Force | Out-Null
 
+# Restore packages
+dotnet restore .\DesktopClock\DesktopClock.csproj -r win-x64
+
+# The build command
+$publishCmd = "msbuild .\DesktopClock\DesktopClock.csproj /t:publish /p:PublishDir=$toolsDir /p:Configuration=Release /p:RuntimeIdentifier=win-x64"
 
 # Run publish and capture output only if it fails
-$null = msbuild publish .\DesktopClock\DesktopClock.csproj -o $toolsDir -c Release -r win-x64
+$null = iex $publishCmd
+
 if ($LASTEXITCODE -ne 0) {
     "🏗️👎🏻"
     # Rerun to show error output with color
-    msbuild publish .\DesktopClock\DesktopClock.csproj -o $toolsDir -c Release -r win-x64
+    iex $publishCmd
     exit 1
 }
 

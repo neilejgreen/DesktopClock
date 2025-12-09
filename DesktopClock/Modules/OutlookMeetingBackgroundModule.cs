@@ -1,4 +1,3 @@
-using System.Windows;
 using System.Windows.Media;
 using DesktopClock.Data;
 using DesktopClock.Properties;
@@ -79,7 +78,7 @@ public class OutlookMeetingBackgroundModule : IWindowModule
             bool hasMeeting = upcomingMeeting != null;
             if ( hasMeeting )
             {
-                MessageBox.Show( $"Upcoming meeting: {upcomingMeeting}" );
+                // System.Windows.MessageBox.Show( $"Upcoming meeting: {upcomingMeeting}" );
                 SetBackground( Status.MeetingUpcoming );
             }
         }

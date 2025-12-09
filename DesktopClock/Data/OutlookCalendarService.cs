@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using Microsoft.Office.Interop.Outlook;
+using Exception = System.Exception;
 
 namespace DesktopClock.Data;
 
@@ -127,7 +128,7 @@ public class OutlookCalendarService : IDisposable
         {
             throw new InvalidOperationException( "Failed to access Outlook calendar: " + ex.Message, ex );
         }
-        catch ( System.Exception ex )
+        catch ( Exception ex )
         {
             throw new InvalidOperationException( "Unexpected error accessing Outlook: " + ex.Message, ex );
         }

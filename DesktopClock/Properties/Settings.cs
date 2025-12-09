@@ -168,9 +168,9 @@ public sealed class Settings : INotifyPropertyChanged, IDisposable
     public Color EffectiveTextColor => OverrideTextColor ?? TextColor;
 
     /// <summary>
-    /// Opacity of the text.
+    /// Opacity of the window.
     /// </summary>
-    public double TextOpacity
+    public double WindowOpacity
     {
         get;
         set
@@ -178,7 +178,7 @@ public sealed class Settings : INotifyPropertyChanged, IDisposable
             if ( field != value )
             {
                 field = value;
-                PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( nameof( TextOpacity ) ) );
+                PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( nameof( WindowOpacity ) ) );
             }
         }
     } = 1;
