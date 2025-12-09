@@ -50,11 +50,12 @@ public class OutlookMeetingBackgroundModule : IWindowModule
             return;
         }
 
-        if ( e.PropertyName == nameof( Settings.Default.OutlookMeetingBackgroundColor ) )
+        if ( e.PropertyName is nameof( Settings.UpcomingMeetingBackgroundColor ) or
+         nameof( Settings.MeetingInProgressBackgroundColor ) )
         {
             CheckForUpcomingMeeting();
         }
-        else if ( e.PropertyName == nameof( Settings.Default.OutlookMeetingLookAheadMinutes ) )
+        else if ( e.PropertyName == nameof( Settings.Default.MeetingLookAheadMinutes ) )
         {
             // Re-check when lookahead changes
             CheckForUpcomingMeeting();
@@ -72,14 +73,26 @@ public class OutlookMeetingBackgroundModule : IWindowModule
                 return;
             }
 
-            //var lookAhead = TimeSpan.FromMinutes( Settings.Default.OutlookMeetingLookAheadMinutes );
-            var lookAhead = TimeSpan.FromDays( 1 );
+            // First check for currently active Teams meeting (highest priority)
+            var currentMeeting = _calendarService.GetCurrentMeeting();
+            if ( currentMeeting != null && currentMeeting.IsTeamsMeeting )
+            {
+                SetBackground( Status.MeetingInProgress );
+                return;
+            }
+
+            // Then check for upcoming meetings
+            var lookAhead = TimeSpan.FromMinutes( Settings.Default.MeetingLookAheadMinutes );
             var upcomingMeeting = _calendarService.GetUpcomingMeeting( lookAhead );
             bool hasMeeting = upcomingMeeting != null;
             if ( hasMeeting )
             {
                 // System.Windows.MessageBox.Show( $"Upcoming meeting: {upcomingMeeting}" );
                 SetBackground( Status.MeetingUpcoming );
+            }
+            else
+            {
+                SetBackground( Status.NoMeeting );
             }
         }
         catch
@@ -93,7 +106,8 @@ public class OutlookMeetingBackgroundModule : IWindowModule
     {
         NoService,
         NoMeeting,
-        MeetingUpcoming
+        MeetingUpcoming,
+        MeetingInProgress
     }
 
     private void SetBackground( Status status )
@@ -105,7 +119,8 @@ public class OutlookMeetingBackgroundModule : IWindowModule
         Color meetingColor = status switch {
             Status.NoService => Colors.Purple,
             Status.NoMeeting => Colors.Transparent,
-            Status.MeetingUpcoming => Settings.Default.OutlookMeetingBackgroundColor,
+            Status.MeetingUpcoming => Settings.Default.UpcomingMeetingBackgroundColor,
+            Status.MeetingInProgress => Settings.Default.MeetingInProgressBackgroundColor,
             _ => Colors.Transparent
         };
 

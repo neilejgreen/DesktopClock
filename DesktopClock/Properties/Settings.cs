@@ -247,7 +247,7 @@ public sealed class Settings : INotifyPropertyChanged, IDisposable
     /// </summary>
     public WindowPlacement Placement { get; set; }
 
-    public Color OutlookMeetingBackgroundColor
+    public Color UpcomingMeetingBackgroundColor
     {
         get;
         set
@@ -255,12 +255,25 @@ public sealed class Settings : INotifyPropertyChanged, IDisposable
             if ( field != value )
             {
                 field = value;
-                PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( nameof( OutlookMeetingBackgroundColor ) ) );
+                PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( nameof( UpcomingMeetingBackgroundColor ) ) );
             }
         }
     }
 
-    public int OutlookMeetingLookAheadMinutes { get; set; }
+    public Color MeetingInProgressBackgroundColor
+    {
+        get;
+        set
+        {
+            if ( field != value )
+            {
+                field = value;
+                PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( nameof( MeetingInProgressBackgroundColor ) ) );
+            }
+        }
+    }
+
+    public int MeetingLookAheadMinutes { get; set; }
 
     /// <summary>
     /// Override background color. When null, background is transparent.
