@@ -46,6 +46,7 @@ public class NaturalLanguageTimeFormatter(
         string nextHourName = GetHourName( hour + 1 );
         string minutesPast = GetMinuteName( minute );
         string minutesTo = GetMinuteName( 60 - minute );
+        string minuteWord = minute is 1 or 59 ? "minute" : "minutes";
         return (hour, minute) switch {
             // noon or midnight
             (12, 0 ) or (0, 0 ) => hourName,
@@ -54,7 +55,7 @@ public class NaturalLanguageTimeFormatter(
             (_, 0 ) => $"{hourName}{( useOClock ? " o'clock" : "" )}",
 
             // Handle small minutes past
-            (_, < 10 ) => $"{minutesPast} minute{( minute == 1 ? "" : "s" )} past {hourName}",
+            (_, < 10 ) => $"{minutesPast} {minuteWord} past {hourName}",
 
             // Handle quarter past
             (_, 15 ) => $"quarter past {hourName}",
@@ -69,7 +70,7 @@ public class NaturalLanguageTimeFormatter(
             (_, > 30 ) when minute % 5 == 0 => $"{minutesTo} to {nextHourName}",
 
             // Handle small minutes to
-            (_, > 55 ) => $"{minutesTo} minutes to {nextHourName}",
+            (_, > 55 ) => $"{minutesTo} {minuteWord} to {nextHourName}",
 
             // "noon thirteen sounds wrong"
             (12, _ ) or (0, _ ) => $"{minutesPast} past {hourName}",
