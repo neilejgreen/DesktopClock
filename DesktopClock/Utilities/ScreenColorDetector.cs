@@ -24,7 +24,10 @@ public static class ScreenColorDetector
     {
         // Get both colors from settings - adapt TextColor, exclude OverrideTextColor from sampling
 
-        Unicolour bgColor = GetAverageColorBehindWindow( Application.Current.MainWindow );
+        Unicolour bgColor =
+            IsBackgroundColorApplied
+                ? Properties.Settings.Default.OverrideBackgroundColor.Value.ToUnicolour()
+                : GetAverageColorBehindWindow( Application.Current.MainWindow );
         Unicolour textColor = Properties.Settings.Default.TextColor.ToUnicolour();
 
         // Try to find the best lightness for contrast in the middle range
@@ -34,6 +37,8 @@ public static class ScreenColorDetector
 
         return adjustedColor.ToMediaColor();
     }
+
+    private static bool IsBackgroundColorApplied => Properties.Settings.Default.OverrideBackgroundColor.HasValue;
 
     /// <summary>
     /// Captures the average color of the screen area behind the specified window.

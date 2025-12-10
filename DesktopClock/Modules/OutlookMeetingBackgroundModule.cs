@@ -116,12 +116,11 @@ public class OutlookMeetingBackgroundModule : IWindowModule
         {
             return;
         }
-        Color meetingColor = status switch {
+        Color? meetingColor = status switch {
             Status.NoService => Colors.Purple,
-            Status.NoMeeting => Colors.Transparent,
             Status.MeetingUpcoming => Settings.Default.UpcomingMeetingBackgroundColor,
             Status.MeetingInProgress => Settings.Default.MeetingInProgressBackgroundColor,
-            _ => Colors.Transparent
+            _ => null
         };
 
         Settings.Default.OverrideBackgroundColor = meetingColor;
