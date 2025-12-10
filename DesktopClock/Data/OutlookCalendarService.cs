@@ -70,9 +70,7 @@ public class OutlookCalendarService : IDisposable
         var endTime = now.Add( lookAhead );
         var filter = $"[Start] >= '{now:g}' AND [Start] <= '{endTime:g}'";
 
-        return FindMeeting( filter, item =>
-            // Ensure the meeting is actually in the future
-            item.Start > now && item.Start <= endTime );
+        return FindMeeting( filter );
     }
 
     /// <summary>
@@ -95,11 +93,7 @@ public class OutlookCalendarService : IDisposable
         var now = DateTime.Now;
         var filter = $"[Start] <= '{now:g}' AND [End] >= '{now:g}'";
 
-        return FindMeeting( filter, item => {
-            // Ensure the meeting is currently active (started but not ended)
-            var endTime = item.Start.AddMinutes( item.Duration );
-            return item.Start <= now && endTime > now;
-        } );
+        return FindMeeting( filter );
     }
 
     /// <summary>
@@ -127,9 +121,8 @@ public class OutlookCalendarService : IDisposable
     /// Finds a meeting matching the given filter and additional condition.
     /// </summary>
     /// <param name="filter">The Outlook filter string.</param>
-    /// <param name="additionalCondition">Additional condition to check for each item.</param>
     /// <returns>Meeting information if found, null otherwise.</returns>
-    private MeetingInfo FindMeeting( string filter, Func<AppointmentItem, bool> additionalCondition )
+    private MeetingInfo FindMeeting( string filter )
     {
         try
         {
@@ -150,10 +143,11 @@ public class OutlookCalendarService : IDisposable
                 {
                     // Check if it's a meeting (not just an appointment) and not canceled
                     // Also exclude all-day and multi-day meetings
-                    bool isMeeting = IsMeeting( item );
-                    bool isalldayOrMultiDay = IsAllDayOrMultiDay( item );
-                    bool meetsAdditionalCondition = additionalCondition( item );
-                    if ( isMeeting && !isalldayOrMultiDay && meetsAdditionalCondition )
+                    bool
+                        isMeeting = IsMeeting( item ),
+                        isAllDayOrMultiDay = IsAllDayOrMultiDay( item );
+
+                    if ( isMeeting && !isAllDayOrMultiDay )
                     {
                         return CreateMeetingInfo( item );
                     }
@@ -234,17 +228,14 @@ public class OutlookCalendarService : IDisposable
     /// </summary>
     private static MeetingInfo CreateMeetingInfo( AppointmentItem item )
     {
-        var location = item.Location ?? string.Empty;
-        var body = item.Body ?? string.Empty;
-        var isTeamsMeeting = IsTeamsMeeting( location, body );
+        string location = item.Location ?? string.Empty;
 
         return new MeetingInfo {
             Subject = item.Subject ?? string.Empty,
             StartTime = new DateTimeOffset( item.Start ),
             Location = location,
             Duration = TimeSpan.FromMinutes( item.Duration ),
-            Organizer = item.Organizer ?? string.Empty,
-            IsTeamsMeeting = isTeamsMeeting
+            Organizer = item.Organizer ?? string.Empty
         };
     }
 

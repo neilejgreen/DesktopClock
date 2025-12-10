@@ -3,7 +3,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:DesktopClock"
+        xmlns:utilities="clr-namespace:DesktopClock.Utilities"
         xmlns:p="clr-namespace:DesktopClock.Properties"
         xmlns:tb="http://www.hardcodet.net/taskbar"
         d:DataContext="{d:DesignInstance Type=local:MainWindow}"
@@ -27,6 +27,8 @@
     </Window.Background>
 
     <Window.Resources>
+        <utilities:ColorCollectionToGradientConverter x:Key="ColorCollectionToGradientConverter" />
+
         <ContextMenu x:Key="MainContextMenu"
                      x:Shared="False">
             <MenuItem Header="Click-_Through"
@@ -46,7 +48,7 @@
 
     <Border CornerRadius="10" Padding="12,0,12,2">
         <Border.Background>
-            <SolidColorBrush Color="{Binding EffectiveBackgroundColor, Source={x:Static p:Settings.Default}, Mode=OneWay}" />
+            <Binding Path="BackgroundGradientColors" Converter="{StaticResource ColorCollectionToGradientConverter}" />
         </Border.Background>
         <Viewbox Height="{Binding Height, Source={x:Static p:Settings.Default}, Mode=OneWay}">
             <TextBlock Text="{Binding CurrentTimeOrCountdownString}"

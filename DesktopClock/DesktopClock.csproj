@@ -54,4 +54,8 @@
   <ItemGroup>
     <Resource Include="DesktopClock.ico" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Converters\" />
+  </ItemGroup>
 </Project>

@@ -1,9 +1,11 @@
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DesktopClock.Modules;
@@ -23,7 +25,7 @@ public partial class MainWindow : Window
     private readonly List<IWindowModule> _modules = [
         new ClockModule(),
         new TextColorModule(),
-        new OutlookMeetingBackgroundModule()
+        new BackgroundColorModule()
         ];
     private TaskbarIcon _trayIcon;
 
@@ -32,6 +34,13 @@ public partial class MainWindow : Window
     /// </summary>
     [ObservableProperty]
     private string _currentTimeOrCountdownString;
+
+    /// <summary>
+    /// Collection of colors to display as a left-to-right gradient background.
+    /// If empty or null, background is transparent.
+    /// </summary>
+    [ObservableProperty]
+    private ObservableCollection<Color> _backgroundGradientColors = [];
 
     public MainWindow()
     {
