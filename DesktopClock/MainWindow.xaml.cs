@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -40,7 +39,7 @@ public partial class MainWindow : Window
     /// If empty or null, background is transparent.
     /// </summary>
     [ObservableProperty]
-    private ObservableCollection<Color> _backgroundGradientColors = [];
+    private IReadOnlyList<Color> _backgroundGradientColors = [];
 
     public MainWindow()
     {

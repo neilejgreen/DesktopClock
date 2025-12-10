@@ -15,7 +15,7 @@ public class BackgroundColorModule : IWindowModule
     private bool _disposed;
 
     // Check for meetings every 30 seconds
-    private readonly TimeSpan _checkInterval = TimeSpan.FromSeconds( 30 );
+    private readonly TimeSpan _checkInterval = TimeSpan.FromSeconds( 3 );
 
     public BackgroundColorModule()
     {
@@ -105,18 +105,7 @@ public class BackgroundColorModule : IWindowModule
 
     private void UpdateBackgroundColors( List<Color> colors )
     {
-        if ( _disposed || _window == null )
-        {
-            return;
-        }
-
-        _window.Dispatcher.Invoke( () => {
-            _window.BackgroundGradientColors.Clear();
-            foreach ( var color in colors )
-            {
-                _window.BackgroundGradientColors.Add( color );
-            }
-        } );
+        _window?.Dispatcher.Invoke( () => _window.BackgroundGradientColors = [ .. colors ] );
     }
 
     public void Dispose()

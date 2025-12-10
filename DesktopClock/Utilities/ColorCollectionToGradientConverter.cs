@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Windows.Data;
 using System.Windows.Media;
@@ -14,7 +13,7 @@ public class ColorCollectionToGradientConverter : IValueConverter
     public object Convert( object value, Type targetType, object parameter, CultureInfo culture )
     {
         // If no gradient colors are set, use transparent
-        if ( value is not ObservableCollection<Color> colors || colors.Count == 0 )
+        if ( value is not IReadOnlyList<Color> colors || colors.Count == 0 )
         {
             return new SolidColorBrush( Colors.Transparent );
         }
