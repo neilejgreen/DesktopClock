@@ -10,10 +10,10 @@ $toolsDir = Join-Path $env:USERPROFILE "tools"
 New-Item -ItemType Directory -Path $toolsDir -Force | Out-Null
 
 # Restore packages
-dotnet restore .\DesktopClock\DesktopClock.csproj -r win-x64
+
 
 # The build command
-$publishCmd = "msbuild .\DesktopClock\DesktopClock.csproj /t:publish /p:PublishDir=$toolsDir /p:Configuration=Release /p:RuntimeIdentifier=win-x64"
+$publishCmd = "dotnet restore .\DesktopClock\DesktopClock.csproj -r win-x64 && msbuild .\DesktopClock\DesktopClock.csproj /t:publish /p:PublishDir=$toolsDir /p:Configuration=Release /p:RuntimeIdentifier=win-x64"
 
 # Run publish and capture output only if it fails
 $null = iex $publishCmd
