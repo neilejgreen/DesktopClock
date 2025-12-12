@@ -1,13 +1,21 @@
 namespace DesktopClock.Utilities;
 
+
+/// <summary>
+/// Options for natural language time formatting.
+/// </summary>
+/// <param name="Its">Whether to include "it's" prefix.</param>
+/// <param name="CapitalizeFirst">Whether to capitalize the first letter.</param>
+/// <param name="UseOClock">Whether to use "o'clock" for exact hours.</param>
+public record NaturalLanguageOptions(
+    bool Its = false,
+    bool CapitalizeFirst = false,
+    bool UseOClock = false );
+
 /// <summary>
 /// Converts DateTime to natural language time format (e.g., "Half past two", "Noon", "Eleven o'clock").
 /// </summary>
-public class NaturalLanguageTimeFormatter(
-    bool its = true,
-    bool capitalizeFirst = true,
-    bool useOClock = true
-    )
+public class NaturalLanguageTimeFormatter
 {
     private static readonly string[] _hourNames =
     [
@@ -25,12 +33,13 @@ public class NaturalLanguageTimeFormatter(
     /// Converts a DateTime to natural language time format.
     /// </summary>
     /// <param name="dateTime">The DateTime to convert.</param>
+    /// <param name="options">Formatting options.</param>
     /// <returns>A natural language representation of the time.</returns>
-    public string Format( DateTime dateTime )
+    public string Format( DateTime dateTime, NaturalLanguageOptions options )
     {
-        string itsPrefix = its ? "it's " : "";
-        string timeString = $"{itsPrefix}{GetTimeString( dateTime )}";
-        if ( capitalizeFirst && timeString.Length > 0 )
+        string itsPrefix = options.Its ? "it's " : "";
+        string timeString = $"{itsPrefix}{GetTimeString( dateTime, options.UseOClock )}";
+        if ( options.CapitalizeFirst && timeString.Length > 0 )
         {
             timeString = timeString[ ..1 ].ToUpper() + timeString[ 1.. ];
         }
@@ -38,7 +47,7 @@ public class NaturalLanguageTimeFormatter(
         return timeString;
     }
 
-    private string GetTimeString( DateTime dateTime )
+    private string GetTimeString( DateTime dateTime, bool useOClock )
     {
         int hour = dateTime.Hour;
         int minute = dateTime.Minute;

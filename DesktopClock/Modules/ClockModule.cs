@@ -1,4 +1,3 @@
-using System.Globalization;
 using DesktopClock.Data;
 using DesktopClock.Properties;
 using DesktopClock.Utilities;
@@ -14,6 +13,7 @@ public class ClockModule : IWindowModule
     private readonly SystemClockTimer _systemClockTimer;
     private MainWindow _window;
     private bool _disposed;
+    private readonly DateTimeFormatter _formatter = new();
 
     public ClockModule()
     {
@@ -53,7 +53,7 @@ public class ClockModule : IWindowModule
         }
 
         // Update display when format settings change
-        if ( e.PropertyName is nameof( Settings.Default.Format ) or nameof( Settings.Default.UseNaturalLanguage ) )
+        if ( e.PropertyName is nameof( Settings.Default.Format ) )
         {
             UpdateDisplayText();
         }
@@ -66,11 +66,7 @@ public class ClockModule : IWindowModule
             return;
         }
 
-        var now = DateTimeOffset.Now;
-        string displayText = Settings.Default.UseNaturalLanguage
-            ? new NaturalLanguageTimeFormatter( its: true, capitalizeFirst: false, useOClock: true ).Format( now.DateTime )
-            : Tokenizer.FormatWithTokenizerOrFallBack( now, Settings.Default.Format, CultureInfo.DefaultThreadCurrentCulture );
-
+        string displayText = _formatter.Format( DateTime.Now, Settings.Default.Format );
         _window.Dispatcher.Invoke( () => _window.CurrentTimeOrCountdownString = displayText );
     }
 
