@@ -113,9 +113,72 @@ public class OutlookCalendarService : IDisposable
     /// </summary>
     private void EnsureCalendarFolderInitialized()
     {
+        // Validate existing COM objects before using them
+        if ( !AreComObjectsValid() )
+        {
+            ReleaseComObjects();
+        }
+
         _outlookApp ??= new Application();
         _namespace ??= _outlookApp.GetNamespace( "MAPI" );
         _calendarFolder ??= _namespace.GetDefaultFolder( OlDefaultFolders.olFolderCalendar );
+    }
+
+    /// <summary>
+    /// Checks if the cached COM objects are still valid (Outlook is still running).
+    /// </summary>
+    private bool AreComObjectsValid()
+    {
+        if ( _outlookApp == null )
+        {
+            return false;
+        }
+
+        try
+        {
+            // Try to access a property to verify the COM object is still valid
+            // If Outlook has been closed, this will throw a COMException
+            _ = _outlookApp.Name;
+            return true;
+        }
+        catch ( COMException )
+        {
+            return false;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Releases all cached COM objects.
+    /// </summary>
+    private void ReleaseComObjects()
+    {
+        if ( _calendarFolder != null )
+        {
+            Marshal.ReleaseComObject( _calendarFolder );
+            _calendarFolder = null;
+        }
+
+        if ( _inboxFolder != null )
+        {
+            Marshal.ReleaseComObject( _inboxFolder );
+            _inboxFolder = null;
+        }
+
+        if ( _namespace != null )
+        {
+            Marshal.ReleaseComObject( _namespace );
+            _namespace = null;
+        }
+
+        if ( _outlookApp != null )
+        {
+            Marshal.ReleaseComObject( _outlookApp );
+            _outlookApp = null;
+        }
     }
 
     /// <summary>
@@ -288,6 +351,12 @@ public class OutlookCalendarService : IDisposable
     /// </summary>
     private void EnsureInboxFolderInitialized()
     {
+        // Validate existing COM objects before using them
+        if ( !AreComObjectsValid() )
+        {
+            ReleaseComObjects();
+        }
+
         _outlookApp ??= new Application();
         _namespace ??= _outlookApp.GetNamespace( "MAPI" );
         _inboxFolder ??= _namespace.GetDefaultFolder( OlDefaultFolders.olFolderInbox );
@@ -297,7 +366,7 @@ public class OutlookCalendarService : IDisposable
     {
         if ( !_disposed )
         {
-            _outlookApp = null;
+            ReleaseComObjects();
             _disposed = true;
         }
     }
