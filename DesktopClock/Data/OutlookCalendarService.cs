@@ -12,6 +12,7 @@ public class OutlookCalendarService : IDisposable
     private Application _outlookApp;
     private NameSpace _namespace;
     private MAPIFolder _calendarFolder;
+    private MAPIFolder _inboxFolder;
     private bool _disposed;
 
     /// <summary>
@@ -258,6 +259,38 @@ public class OutlookCalendarService : IDisposable
                searchText.Contains( "conf.teams.microsoft.com" ) ||
                searchText.Contains( "join.microsoft.com" ) ||
                ( searchText.Contains( "teams" ) && ( searchText.Contains( "meeting" ) || searchText.Contains( "join" ) ) );
+    }
+
+    /// <summary>
+    /// Gets the count of unread emails in the Outlook inbox.
+    /// </summary>
+    /// <returns>The number of unread emails, or 0 if unavailable.</returns>
+    public int GetUnreadMailCount()
+    {
+        ThrowIfDisposed();
+
+        try
+        {
+            EnsureInboxFolderInitialized();
+
+            // Get unread items count from the inbox
+            return _inboxFolder.UnReadItemCount;
+        }
+        catch ( Exception )
+        {
+            // If Outlook is not available or any error occurs, return 0
+            return 0;
+        }
+    }
+
+    /// <summary>
+    /// Ensures Outlook inbox folder is initialized.
+    /// </summary>
+    private void EnsureInboxFolderInitialized()
+    {
+        _outlookApp ??= new Application();
+        _namespace ??= _outlookApp.GetNamespace( "MAPI" );
+        _inboxFolder ??= _namespace.GetDefaultFolder( OlDefaultFolders.olFolderInbox );
     }
 
     public void Dispose()

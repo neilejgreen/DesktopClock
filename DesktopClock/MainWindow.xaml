@@ -28,6 +28,7 @@
 
     <Window.Resources>
         <utilities:ColorCollectionToGradientConverter x:Key="ColorCollectionToGradientConverter" />
+        <utilities:StringToVisibilityConverter x:Key="StringToVisibilityConverter" />
 
         <ContextMenu x:Key="MainContextMenu"
                      x:Shared="False">
@@ -51,12 +52,22 @@
             <Binding Path="BackgroundGradientColors" Converter="{StaticResource ColorCollectionToGradientConverter}" />
         </Border.Background>
         <Viewbox Height="{Binding Height, Source={x:Static p:Settings.Default}, Mode=OneWay}">
-            <TextBlock Text="{Binding CurrentTimeOrCountdownString}"
-                       TextWrapping="Wrap">
-                <TextBlock.Foreground>
-                    <SolidColorBrush Color="{Binding EffectiveTextColor, Source={x:Static p:Settings.Default}, Mode=OneWay}" />
-                </TextBlock.Foreground>
-            </TextBlock>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="{Binding CurrentTimeOrCountdownString}"
+                           TextWrapping="Wrap">
+                    <TextBlock.Foreground>
+                        <SolidColorBrush Color="{Binding EffectiveTextColor, Source={x:Static p:Settings.Default}, Mode=OneWay}" />
+                    </TextBlock.Foreground>
+                </TextBlock>
+                <TextBlock Text="{Binding NotificationText}"
+                           Margin="4,-1.75,-1,0"
+                           TextWrapping="Wrap"
+                           Visibility="{Binding NotificationText, Converter={StaticResource StringToVisibilityConverter}}">
+                    <TextBlock.Foreground>
+                        <SolidColorBrush Color="{Binding EffectiveTextColor, Source={x:Static p:Settings.Default}, Mode=OneWay}" />
+                    </TextBlock.Foreground>
+                </TextBlock>
+            </StackPanel>
         </Viewbox>
     </Border>
 </Window>

@@ -24,7 +24,8 @@ public partial class MainWindow : Window
     private readonly List<IWindowModule> _modules = [
         new ClockModule(),
         new TextColorModule(),
-        new BackgroundColorModule()
+        new BackgroundColorModule(),
+        new UnreadMailModule()
         ];
     private TaskbarIcon _trayIcon;
 
@@ -33,6 +34,12 @@ public partial class MainWindow : Window
     /// </summary>
     [ObservableProperty]
     private string _currentTimeOrCountdownString;
+
+    /// <summary>
+    /// Text for notifications displayed next to the clock (e.g., icons for unread mail).
+    /// </summary>
+    [ObservableProperty]
+    private string _notificationText = string.Empty;
 
     /// <summary>
     /// Collection of colors to display as a left-to-right gradient background.
