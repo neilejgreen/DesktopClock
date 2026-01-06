@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DesktopClock.Modules;
@@ -28,6 +29,7 @@ public partial class MainWindow : Window
         new UnreadMailModule()
         ];
     private TaskbarIcon _trayIcon;
+    private DispatcherTimer _topmostEnforcementTimer;
 
     /// <summary>
     /// The current date and time as a formatted string.
@@ -65,10 +67,38 @@ public partial class MainWindow : Window
         ContextMenu = Resources[ "MainContextMenu" ] as ContextMenu;
 
         ConfigureTrayIcon( true );
+
+        // Initialize timer to periodically enforce Topmost behavior
+        InitializeTopmostEnforcement();
     }
 
     private void InitializeModules() =>
         _modules.ForEach( module => module.Initialize( this ) );
+
+    /// <summary>
+    /// Initializes a timer to periodically enforce the Topmost window behavior.
+    /// This prevents the window from losing its always-on-top status over time.
+    /// </summary>
+    private void InitializeTopmostEnforcement()
+    {
+        _topmostEnforcementTimer = new DispatcherTimer {
+            Interval = TimeSpan.FromSeconds( 5 ) // Check every 5 seconds
+        };
+        _topmostEnforcementTimer.Tick += ( s, e ) => EnforceTopmost();
+        _topmostEnforcementTimer.Start();
+    }
+
+    /// <summary>
+    /// Ensures the window remains topmost when the setting is enabled.
+    /// </summary>
+    private void EnforceTopmost()
+    {
+        if ( Settings.Default.Topmost && !Topmost )
+        {
+            Topmost = false; // Reset first to trigger the change
+            Topmost = true;
+        }
+    }
 
     /// <summary>
     /// Closes the app.
@@ -155,6 +185,9 @@ public partial class MainWindow : Window
         // Save the last text and the placement to preserve dimensions and position of the clock.
         Settings.Default.LastDisplay = CurrentTimeOrCountdownString;
         Settings.Default.Placement = this.GetPlacement();
+
+        // Stop and dispose the topmost enforcement timer
+        _topmostEnforcementTimer?.Stop();
 
         // Dispose all modules
         _modules.ForEach( module => module.Dispose() );
