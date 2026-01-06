@@ -50,6 +50,22 @@ public partial class MainWindow : Window
     [ObservableProperty]
     private IReadOnlyList<Color> _backgroundGradientColors = [];
 
+    /// <summary>
+    /// Indicates whether the background should pulsate.
+    /// </summary>
+    [ObservableProperty]
+    private bool _shouldPulsateBackground;
+
+    /// <summary>
+    /// Gets the effective window opacity. Returns 1.0 when siren is active, otherwise returns the setting value.
+    /// </summary>
+    public double EffectiveOpacity => ShouldPulsateBackground ? 1.0 : Settings.Default.WindowOpacity;
+
+    partial void OnShouldPulsateBackgroundChanged( bool value )
+    {
+        OnPropertyChanged( nameof( EffectiveOpacity ) );
+    }
+
     public MainWindow()
     {
         InitializeComponent();

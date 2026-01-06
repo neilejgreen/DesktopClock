@@ -13,7 +13,7 @@
         WindowStyle="None"
         ResizeMode="NoResize"
         SizeToContent="WidthAndHeight"
-        Opacity="{Binding WindowOpacity, Source={x:Static p:Settings.Default}, Mode=OneWay}"
+        Opacity="{Binding EffectiveOpacity, Mode=OneWay}"
         Topmost="{Binding Topmost, Source={x:Static p:Settings.Default}, Mode=TwoWay}"
         FontFamily="{Binding FontFamily, Source={x:Static p:Settings.Default}, Mode=OneWay}"
         FontStyle="{Binding FontStyle, Source={x:Static p:Settings.Default}, Mode=OneWay}"
@@ -47,11 +47,38 @@
                         MenuActivation="LeftOrRightClick" />
     </Window.Resources>
 
-    <Border CornerRadius="10" Padding="12,0,12,2">
+    <Border CornerRadius="10">
         <Border.Background>
-            <Binding Path="BackgroundGradientColors" Converter="{StaticResource ColorCollectionToGradientConverter}" />
+            <SolidColorBrush Color="Transparent" />
         </Border.Background>
-        <Viewbox Height="{Binding Height, Source={x:Static p:Settings.Default}, Mode=OneWay}">
+        <Grid>
+            <Border CornerRadius="10" Padding="12,0,12,2" Name="PulsatingBackground">
+                <Border.Background>
+                    <Binding Path="BackgroundGradientColors" Converter="{StaticResource ColorCollectionToGradientConverter}" />
+                </Border.Background>
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding ShouldPulsateBackground}" Value="True">
+                                <DataTrigger.EnterActions>
+                                    <BeginStoryboard Name="PulsateStoryboard">
+                                        <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                            <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                             From="1.0"
+                                                             To="0.3"
+                                                             Duration="0:0:0.5" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </DataTrigger.EnterActions>
+                                <DataTrigger.ExitActions>
+                                    <StopStoryboard BeginStoryboardName="PulsateStoryboard" />
+                                </DataTrigger.ExitActions>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+            </Border>
+            <Viewbox Height="{Binding Height, Source={x:Static p:Settings.Default}, Mode=OneWay}" Margin="12,0,12,2">
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="{Binding CurrentTimeOrCountdownString}"
                            TextWrapping="Wrap">
@@ -69,5 +96,6 @@
                 </TextBlock>
             </StackPanel>
         </Viewbox>
+        </Grid>
     </Border>
 </Window>

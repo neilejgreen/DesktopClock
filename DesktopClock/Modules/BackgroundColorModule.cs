@@ -77,6 +77,9 @@ public class BackgroundColorModule : IWindowModule
                 // Check for currently active Teams meeting
                 var hasMeetingInProgress = _calendarService.GetCurrentMeeting() is not null;
 
+                // Enable pulsating animation if meeting is in progress
+                _window?.Dispatcher.Invoke( () => _window.ShouldPulsateBackground = hasMeetingInProgress );
+
                 // Check for upcoming meetings
                 var lookAhead = TimeSpan.FromMinutes( Settings.Default.MeetingLookAheadMinutes );
                 bool hasMeetingUpcoming = _calendarService.GetUpcomingMeeting( lookAhead ) is not null;
