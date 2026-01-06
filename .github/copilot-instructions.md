@@ -3,6 +3,13 @@
 ## Project Overview
 DesktopClock is a lightweight desktop clock application built with WPF and .NET. It provides an always-visible clock on the user's desktop with extensive customization options.
 
+## GitHub Copilot Agent Behavior
+
+### Response Style
+- **Explain before changing**: When asked diagnostic questions ("why isn't this working?", "what's wrong here?"), provide an explanation first
+- **Ask for confirmation** before making changes if the request is ambiguous
+- Questions starting with "why", "how", "what" should get explanations, not automatic fixes
+
 ## Technology Stack
 - **Framework**: .NET with WPF (Windows Presentation Foundation)
 - **UI**: XAML for markup, C# for code-behind
@@ -13,9 +20,9 @@ DesktopClock is a lightweight desktop clock application built with WPF and .NET.
 - **CommunityToolkit.Mvvm** (v8.4.0) - MVVM patterns and helpers
 - **H.NotifyIcon.Wpf** (v2.2.0) - System tray integration
 - **Humanizer.Core** (v2.14.1) - String manipulation and formatting
+- **Microsoft.Office.Interop.Outlook** (v15.0.4797.1003) - Outlook calendar integration via NuGet
 - **Newtonsoft.Json** (v13.0.3) - JSON serialization
 - **Wacton.Unicolour** (v6.3.0) - Color manipulation
-- **Microsoft Office Interop** - Outlook calendar integration (COM references)
 
 ## Project Structure
 
