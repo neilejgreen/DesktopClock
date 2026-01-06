@@ -9,8 +9,8 @@ if( $clockProc ){
 $toolsDir = Join-Path $env:USERPROFILE "tools"
 New-Item -ItemType Directory -Path $toolsDir -Force | Out-Null
 
-# The build command
-$publishCmd = "dotnet publish .\DesktopClock\DesktopClock.csproj -c Release -r win-x64 -o `"$toolsDir`""
+# Restore first with the RID, then build and publish
+$publishCmd = "msbuild .\DesktopClock\DesktopClock.csproj /t:Restore /p:RuntimeIdentifier=win-x64 && msbuild .\DesktopClock\DesktopClock.csproj /t:publish /p:PublishDir=`"$toolsDir`" /p:Configuration=Release /p:RuntimeIdentifier=win-x64"
 
 # Run publish and capture output only if it fails
 $null = iex $publishCmd

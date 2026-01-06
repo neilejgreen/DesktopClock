@@ -20,9 +20,17 @@ DesktopClock is a lightweight desktop clock application built with WPF and .NET.
 - **CommunityToolkit.Mvvm** (v8.4.0) - MVVM patterns and helpers
 - **H.NotifyIcon.Wpf** (v2.2.0) - System tray integration
 - **Humanizer.Core** (v2.14.1) - String manipulation and formatting
-- **Microsoft.Office.Interop.Outlook** (v15.0.4797.1003) - Outlook calendar integration via NuGet
+- **Microsoft.Office.Interop.Outlook** (v15.0.4797.1003) - NuGet package for VS Code IntelliSense (excluded from build)
 - **Newtonsoft.Json** (v13.0.3) - JSON serialization
 - **Wacton.Unicolour** (v6.3.0) - Color manipulation
+
+### Office Interop - Hybrid Approach
+The project uses a hybrid approach for Office interop to support both VS Code and MSBuild:
+- **NuGet package** (`Microsoft.Office.Interop.Outlook`): Provides IntelliSense in VS Code, but excluded from build via `<ExcludeAssets>compile;runtime;build</ExcludeAssets>`
+- **COM references**: Used by MSBuild at build time for `Microsoft.Office.Core` and `Microsoft.Office.Interop.Outlook`
+- This allows VS Code to show no errors while MSBuild generates the actual interop assemblies
+- **Never remove the COM references** - they are required for the build to work
+- The NuGet package is purely for IDE support and does not conflict with COM references
 
 ## Project Structure
 
@@ -81,7 +89,7 @@ DesktopClock is a lightweight desktop clock application built with WPF and .NET.
 
 ### Building
 - **IMPORTANT**: Use `msbuild` to build the solution (or Visual Studio if building manually)
-- `dotnet build` will NOT work due to COM Interop dependencies (Office Interop references)
+- **DO NOT use `dotnet build`** - it does NOT support COM references and will fail
 - The COM references require MSBuild's traditional project system
 - Build command: `msbuild DesktopClock.sln` or `msbuild DesktopClock.sln /p:Configuration=Release`
 - **Warnings are treated as errors in Release builds** - ensure code is warning-free
@@ -108,8 +116,11 @@ DesktopClock is a lightweight desktop clock application built with WPF and .NET.
 ## Special Considerations
 
 ### COM Interop
-- Outlook integration uses COM interop - be careful with object lifecycle
+- Project uses a **hybrid NuGet + COM reference approach** for Office interop
+- NuGet package (`Microsoft.Office.Interop.Outlook`) is for VS Code IntelliSense only - excluded from build
+- COM references generate the actual interop assemblies used at runtime
 - Always release COM objects properly to avoid memory leaks
+- Be careful with object lifecycle in Outlook integration code
 
 ### Windows Integration
 - Application uses Windows Forms alongside WPF for certain features
