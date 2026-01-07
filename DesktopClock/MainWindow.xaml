@@ -59,7 +59,7 @@
                 <Border.Style>
                     <Style TargetType="Border">
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding ShouldPulsateBackground}" Value="True">
+                            <DataTrigger Binding="{Binding IsPulsating}" Value="True">
                                 <DataTrigger.EnterActions>
                                     <BeginStoryboard Name="PulsateStoryboard">
                                         <Storyboard RepeatBehavior="Forever" AutoReverse="True">

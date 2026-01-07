@@ -51,19 +51,51 @@ public partial class MainWindow : Window
     private IReadOnlyList<Color> _backgroundGradientColors = [];
 
     /// <summary>
-    /// Indicates whether the background should pulsate.
+    /// Indicates whether the background is pulsating.
     /// </summary>
     [ObservableProperty]
-    private bool _shouldPulsateBackground;
+    private bool _isPulsating;
 
     /// <summary>
     /// Gets the effective window opacity. Returns 1.0 when siren is active, otherwise returns the setting value.
     /// </summary>
-    public double EffectiveOpacity => ShouldPulsateBackground ? 1.0 : Settings.Default.WindowOpacity;
+    public double EffectiveOpacity => IsPulsating ? 1.0 : Settings.Default.WindowOpacity;
 
-    partial void OnShouldPulsateBackgroundChanged( bool value )
+    /// <summary>
+    /// Gets the effective click-through state. Returns false when pulsing (to allow clicking), otherwise returns the setting value.
+    /// </summary>
+    public bool EffectiveClickThrough => !IsPulsating && Settings.Default.ClickThrough;
+
+    partial void OnIsPulsatingChanged( bool value )
     {
         OnPropertyChanged( nameof( EffectiveOpacity ) );
+        ApplyClickThrough();
+    }
+
+    /// <summary>
+    /// Starts the pulsating background effect and disables click-through.
+    /// </summary>
+    public void StartPulsing()
+    {
+        if ( IsPulsating )
+        {
+            return; // Already pulsing
+        }
+
+        IsPulsating = true;
+    }
+
+    /// <summary>
+    /// Stops the pulsating background effect and restores click-through state.
+    /// </summary>
+    public void StopPulsing()
+    {
+        if ( !IsPulsating )
+        {
+            return; // Not pulsing
+        }
+
+        IsPulsating = false;
     }
 
     public MainWindow()
@@ -167,6 +199,14 @@ public partial class MainWindow : Window
 
     private void Window_MouseDown( object sender, MouseButtonEventArgs e )
     {
+        // Stop pulsing on click
+        if ( IsPulsating && e.ChangedButton == MouseButton.Left )
+        {
+            StopPulsing();
+            e.Handled = true;
+            return;
+        }
+
         // Drag the window to move it when click-through is disabled.
         if ( e.ChangedButton == MouseButton.Left && !Settings.Default.ClickThrough )
         {
@@ -250,7 +290,7 @@ public partial class MainWindow : Window
             const int WS_EX_TOOLWINDOW = 0x00000080;
 
             int exStyle = GetWindowLong( hwnd, GWL_EXSTYLE );
-            int newStyle = Settings.Default.ClickThrough
+            int newStyle = EffectiveClickThrough
                 ? exStyle | WS_EX_TRANSPARENT | WS_EX_LAYERED | WS_EX_TOOLWINDOW
                 : ( exStyle & ~( WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW ) ) | WS_EX_LAYERED; // keep layered for opacity/visuals
             SetWindowLong( hwnd, GWL_EXSTYLE, newStyle );

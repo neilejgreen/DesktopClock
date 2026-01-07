@@ -17,6 +17,9 @@ public class BackgroundColorModule : IWindowModule
     // Check for meetings every 30 seconds
     private readonly TimeSpan _checkInterval = TimeSpan.FromSeconds( 3 );
 
+    // Track the current meeting to detect state changes
+    private MeetingInfo _currentMeeting;
+
     public BackgroundColorModule()
     {
         _calendarService = new OutlookCalendarService();
@@ -71,26 +74,48 @@ public class BackgroundColorModule : IWindowModule
             {
                 // Outlook not available - add debug color
                 activeColors.Add( Colors.Purple );
+
+                // Clear tracked meeting
+                _currentMeeting = null;
             }
             else
             {
-                // Check for currently active Teams meeting
-                var hasMeetingInProgress = _calendarService.GetCurrentMeeting() is not null;
-
-                // Enable pulsating animation if meeting is in progress
-                _window?.Dispatcher.Invoke( () => _window.ShouldPulsateBackground = hasMeetingInProgress );
+                // Check for currently active meeting
+                var currentMeeting = _calendarService.GetCurrentMeeting();
 
                 // Check for upcoming meetings
                 var lookAhead = TimeSpan.FromMinutes( Settings.Default.MeetingLookAheadMinutes );
-                bool hasMeetingUpcoming = _calendarService.GetUpcomingMeeting( lookAhead ) is not null;
+                var upcomingMeeting = _calendarService.GetUpcomingMeeting( lookAhead );
 
-                if ( hasMeetingInProgress )
+                // Detect when a meeting newly becomes current
+                bool meetingNewlyBecameCurrent = currentMeeting != null &&
+                    ( _currentMeeting == null ||
+                      _currentMeeting.Subject != currentMeeting.Subject ||
+                      _currentMeeting.StartTime != currentMeeting.StartTime );
+
+                // Detect when a current meeting ends
+                bool currentMeetingEnded = _currentMeeting != null && currentMeeting == null;
+
+                // Update tracked meeting
+                _currentMeeting = currentMeeting;
+
+                // Handle pulsing state changes
+                if ( meetingNewlyBecameCurrent )
+                {
+                    _window?.Dispatcher.Invoke( _window.StartPulsing );
+                }
+                else if ( currentMeetingEnded )
+                {
+                    _window?.Dispatcher.Invoke( _window.StopPulsing );
+                }
+
+                // Update background colors
+                if ( currentMeeting != null )
                 {
                     activeColors.Add( Settings.Default.MeetingInProgressBackgroundColor );
                 }
 
-                // Add colors for each active condition
-                if ( hasMeetingUpcoming )
+                if ( upcomingMeeting != null )
                 {
                     activeColors.Add( Settings.Default.UpcomingMeetingBackgroundColor );
                 }
@@ -103,6 +128,9 @@ public class BackgroundColorModule : IWindowModule
         {
             // If there's an error accessing Outlook, clear background
             UpdateBackgroundColors( [] );
+
+            // Clear tracked meeting
+            _currentMeeting = null;
         }
     }
 
