@@ -178,22 +178,6 @@ public sealed class Settings : INotifyPropertyChanged, IDisposable
     } = 1;
 
     /// <summary>
-    /// Keeps the clock on top of other windows.
-    /// </summary>
-    public bool Topmost
-    {
-        get;
-        set
-        {
-            if ( field != value )
-            {
-                field = value;
-                PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( nameof( Topmost ) ) );
-            }
-        }
-    } = true;
-
-    /// <summary>
     /// Height of the clock window.
     /// </summary>
     public int Height
@@ -213,23 +197,6 @@ public sealed class Settings : INotifyPropertyChanged, IDisposable
     /// Opens the app when you log in.
     /// </summary>
     public bool RunOnStartup { get; set; } = false;
-
-    /// <summary>
-    /// Makes the clock ignore mouse clicks (click-through) so underlying windows receive input.
-    /// Also hides the window from Alt+Tab when enabled.
-    /// </summary>
-    public bool ClickThrough
-    {
-        get;
-        set
-        {
-            if ( field != value )
-            {
-                field = value;
-                PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( nameof( ClickThrough ) ) );
-            }
-        }
-    } = true;
 
     /// <summary>
     /// The last text shown on the clock, saved to maintain the dimensions on the next launch.

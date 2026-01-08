@@ -126,8 +126,7 @@ public class BackgroundColorModule : IWindowModule
         }
         catch
         {
-            // If there's an error accessing Outlook, clear background
-            UpdateBackgroundColors( [] );
+            UpdateBackgroundColors( [ Colors.Purple ] );
 
             // Clear tracked meeting
             _currentMeeting = null;

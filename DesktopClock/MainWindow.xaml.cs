@@ -1,9 +1,7 @@
 using System.ComponentModel;
-using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -12,6 +10,7 @@ using DesktopClock.Modules;
 using DesktopClock.Properties;
 using H.NotifyIcon;
 using H.NotifyIcon.EfficiencyMode;
+using Microsoft.Win32;
 using WpfWindowPlacement;
 
 namespace DesktopClock;
@@ -28,8 +27,10 @@ public partial class MainWindow : Window
         new BackgroundColorModule(),
         new UnreadMailModule()
         ];
+
+    private EventHandler _displayChangedHandler;
+
     private TaskbarIcon _trayIcon;
-    private DispatcherTimer _topmostEnforcementTimer;
 
     /// <summary>
     /// The current date and time as a formatted string.
@@ -57,19 +58,25 @@ public partial class MainWindow : Window
     private bool _isPulsating;
 
     /// <summary>
+    /// Indicates whether the window is movable (not click-through).
+    /// </summary>
+    [ObservableProperty]
+    private bool _isMovable;
+
+    /// <summary>
     /// Gets the effective window opacity. Returns 1.0 when siren is active, otherwise returns the setting value.
     /// </summary>
     public double EffectiveOpacity => IsPulsating ? 1.0 : Settings.Default.WindowOpacity;
 
-    /// <summary>
-    /// Gets the effective click-through state. Returns false when pulsing (to allow clicking), otherwise returns the setting value.
-    /// </summary>
-    public bool EffectiveClickThrough => !IsPulsating && Settings.Default.ClickThrough;
-
     partial void OnIsPulsatingChanged( bool value )
     {
         OnPropertyChanged( nameof( EffectiveOpacity ) );
-        ApplyClickThrough();
+        UpdateWindowState();
+    }
+
+    partial void OnIsMovableChanged( bool value )
+    {
+        UpdateWindowState();
     }
 
     /// <summary>
@@ -115,38 +122,10 @@ public partial class MainWindow : Window
         ContextMenu = Resources[ "MainContextMenu" ] as ContextMenu;
 
         ConfigureTrayIcon( true );
-
-        // Initialize timer to periodically enforce Topmost behavior
-        InitializeTopmostEnforcement();
     }
 
     private void InitializeModules() =>
         _modules.ForEach( module => module.Initialize( this ) );
-
-    /// <summary>
-    /// Initializes a timer to periodically enforce the Topmost window behavior.
-    /// This prevents the window from losing its always-on-top status over time.
-    /// </summary>
-    private void InitializeTopmostEnforcement()
-    {
-        _topmostEnforcementTimer = new DispatcherTimer {
-            Interval = TimeSpan.FromSeconds( 5 ) // Check every 5 seconds
-        };
-        _topmostEnforcementTimer.Tick += ( s, e ) => EnforceTopmost();
-        _topmostEnforcementTimer.Start();
-    }
-
-    /// <summary>
-    /// Ensures the window remains topmost when the setting is enabled.
-    /// </summary>
-    private void EnforceTopmost()
-    {
-        if ( Settings.Default.Topmost && !Topmost )
-        {
-            Topmost = false; // Reset first to trigger the change
-            Topmost = true;
-        }
-    }
 
     /// <summary>
     /// Closes the app.
@@ -166,8 +145,8 @@ public partial class MainWindow : Window
                 _trayIcon.ContextMenu.DataContext = this;
                 _trayIcon.ForceCreate( enablesEfficiencyMode: false );
                 _trayIcon.TrayLeftMouseDoubleClick += ( _, _ ) => {
-                    // Toggle click-through on double-click
-                    Settings.Default.ClickThrough = !Settings.Default.ClickThrough;
+                    // Toggle movable on double-click
+                    IsMovable = !IsMovable;
                 };
             }
         }
@@ -185,11 +164,6 @@ public partial class MainWindow : Window
     {
         switch ( e.PropertyName )
         {
-
-            case nameof( Settings.Default.ClickThrough ):
-                ApplyClickThrough();
-                break;
-
             case nameof( Settings.Default.TextColor ):
                 // Clear override when base text color changes (so new lightness is immediately visible)
                 Settings.Default.OverrideTextColor = null;
@@ -207,8 +181,8 @@ public partial class MainWindow : Window
             return;
         }
 
-        // Drag the window to move it when click-through is disabled.
-        if ( e.ChangedButton == MouseButton.Left && !Settings.Default.ClickThrough )
+        // Drag the window to move it when movable.
+        if ( e.ChangedButton == MouseButton.Left && IsMovable )
         {
             DragMove();
         }
@@ -219,7 +193,18 @@ public partial class MainWindow : Window
         this.SetPlacement( Settings.Default.Placement );
 
         // Make window click-through if enabled.
-        ApplyClickThrough();
+        UpdateWindowState();
+
+        _displayChangedHandler = ( _, __ ) => UpdateWindowState();
+
+        IsVisibleChanged += OnIsVisibleChangedChanged;
+        SystemEvents.DisplaySettingsChanged += _displayChangedHandler;
+
+    }
+
+    private void OnIsVisibleChangedChanged( object _, DependencyPropertyChangedEventArgs e )
+    {
+        UpdateWindowState();
     }
 
     private void Window_ContentRendered( object sender, EventArgs e )
@@ -242,9 +227,6 @@ public partial class MainWindow : Window
         Settings.Default.LastDisplay = CurrentTimeOrCountdownString;
         Settings.Default.Placement = this.GetPlacement();
 
-        // Stop and dispose the topmost enforcement timer
-        _topmostEnforcementTimer?.Stop();
-
         // Dispose all modules
         _modules.ForEach( module => module.Dispose() );
 
@@ -255,6 +237,9 @@ public partial class MainWindow : Window
         {
             Settings.Default.Save();
         }
+
+        IsVisibleChanged -= OnIsVisibleChangedChanged;
+        SystemEvents.DisplaySettingsChanged -= _displayChangedHandler;
 
         App.SetRunOnStartup( Settings.Default.RunOnStartup );
     }
@@ -279,31 +264,9 @@ public partial class MainWindow : Window
         }
     }
 
-    private void ApplyClickThrough()
+    public void UpdateWindowState()
     {
-        try
-        {
-            var hwnd = new WindowInteropHelper( this ).Handle;
-            const int GWL_EXSTYLE = -20;
-            const int WS_EX_TRANSPARENT = 0x00000020;
-            const int WS_EX_LAYERED = 0x00080000;
-            const int WS_EX_TOOLWINDOW = 0x00000080;
-
-            int exStyle = GetWindowLong( hwnd, GWL_EXSTYLE );
-            int newStyle = EffectiveClickThrough
-                ? exStyle | WS_EX_TRANSPARENT | WS_EX_LAYERED | WS_EX_TOOLWINDOW
-                : ( exStyle & ~( WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW ) ) | WS_EX_LAYERED; // keep layered for opacity/visuals
-            SetWindowLong( hwnd, GWL_EXSTYLE, newStyle );
-        }
-        catch
-        {
-            // Ignore failures.
-        }
+        Win32.UpdateWindow( this, isClickable: IsPulsating || IsMovable );
     }
 
-    [DllImport( "user32.dll", SetLastError = true )]
-    private static extern int GetWindowLong( IntPtr hWnd, int nIndex );
-
-    [DllImport( "user32.dll", SetLastError = true )]
-    private static extern int SetWindowLong( IntPtr hWnd, int nIndex, int dwNewLong );
 }

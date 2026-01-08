@@ -14,7 +14,6 @@
         ResizeMode="NoResize"
         SizeToContent="WidthAndHeight"
         Opacity="{Binding EffectiveOpacity, Mode=OneWay}"
-        Topmost="{Binding Topmost, Source={x:Static p:Settings.Default}, Mode=TwoWay}"
         FontFamily="{Binding FontFamily, Source={x:Static p:Settings.Default}, Mode=OneWay}"
         FontStyle="{Binding FontStyle, Source={x:Static p:Settings.Default}, Mode=OneWay}"
         MouseDown="Window_MouseDown"
@@ -32,9 +31,9 @@
 
         <ContextMenu x:Key="MainContextMenu"
                      x:Shared="False">
-            <MenuItem Header="Click-_Through"
+            <MenuItem Header="_Movable"
                       IsCheckable="True"
-                      IsChecked="{Binding ClickThrough, Source={x:Static p:Settings.Default}, Mode=TwoWay}" />
+                      IsChecked="{Binding IsMovable, Mode=TwoWay}" />
 
             <MenuItem Command="{Binding ExitCommand}"
                       Header="E_xit" />
