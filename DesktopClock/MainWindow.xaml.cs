@@ -173,14 +173,6 @@ public partial class MainWindow : Window
 
     private void Window_MouseDown( object sender, MouseButtonEventArgs e )
     {
-        // Stop pulsing on click
-        if ( IsPulsating && e.ChangedButton == MouseButton.Left )
-        {
-            StopPulsing();
-            e.Handled = true;
-            return;
-        }
-
         // Drag the window to move it when movable.
         if ( e.ChangedButton == MouseButton.Left && IsMovable )
         {

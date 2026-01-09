@@ -1,3 +1,4 @@
+using System.Windows.Input;
 using System.Windows.Media;
 using DesktopClock.Data;
 using DesktopClock.Properties;
@@ -20,6 +21,9 @@ public class BackgroundColorModule : IWindowModule
     // Track the current meeting to detect state changes
     private MeetingInfo _currentMeeting;
 
+    // Track dismissed meeting to prevent re-pulsing
+    private MeetingInfo _dismissedMeeting;
+
     public BackgroundColorModule()
     {
         _calendarService = new OutlookCalendarService();
@@ -32,8 +36,33 @@ public class BackgroundColorModule : IWindowModule
     {
         _window = window ?? throw new ArgumentNullException( nameof( window ) );
 
+        // Subscribe to mouse clicks for pulsing interactions
+        _window.MouseDown += OnWindowMouseDown;
+
         // Check immediately on initialization
         _ = StartCheckingForMeetings();
+    }
+
+    private void OnWindowMouseDown( object sender, MouseButtonEventArgs e )
+    {
+        if ( !_window.IsPulsating )
+        {
+            return;
+        }
+
+        if ( e.ChangedButton == MouseButton.Middle )
+        {
+            // Middle-click: Dismiss the current meeting
+            _dismissedMeeting = _currentMeeting;
+            e.Handled = true;
+            CheckForUpcomingMeeting();
+        }
+        else if ( e.ChangedButton == MouseButton.Left )
+        {
+            // Left-click: Just stop pulsing
+            _window.StopPulsing();
+            e.Handled = true;
+        }
     }
 
     private async Task StartCheckingForMeetings()
@@ -75,17 +104,17 @@ public class BackgroundColorModule : IWindowModule
                 // Outlook not available - add debug color
                 activeColors.Add( Colors.Purple );
 
-                // Clear tracked meeting
+                // Clear tracked meetings
                 _currentMeeting = null;
+                _dismissedMeeting = null;
             }
             else
             {
-                // Check for currently active meeting
-                var currentMeeting = _calendarService.GetCurrentMeeting();
+                MeetingInfo currentMeeting = GetCurrentMeeting();
 
                 // Check for upcoming meetings
-                var lookAhead = TimeSpan.FromMinutes( Settings.Default.MeetingLookAheadMinutes );
-                var upcomingMeeting = _calendarService.GetUpcomingMeeting( lookAhead );
+                TimeSpan lookAhead = TimeSpan.FromMinutes( Settings.Default.MeetingLookAheadMinutes );
+                MeetingInfo upcomingMeeting = _calendarService.GetUpcomingMeeting( lookAhead );
 
                 // Detect when a meeting newly becomes current
                 bool meetingNewlyBecameCurrent = currentMeeting != null &&
@@ -94,7 +123,7 @@ public class BackgroundColorModule : IWindowModule
                       _currentMeeting.StartTime != currentMeeting.StartTime );
 
                 // Detect when a current meeting ends
-                bool currentMeetingEnded = _currentMeeting != null && currentMeeting == null;
+                bool currentMeetingEnded = (_currentMeeting, currentMeeting) is (not null, null );
 
                 // Update tracked meeting
                 _currentMeeting = currentMeeting;
@@ -128,9 +157,31 @@ public class BackgroundColorModule : IWindowModule
         {
             UpdateBackgroundColors( [ Colors.Purple ] );
 
-            // Clear tracked meeting
+            // Clear tracked meetings
             _currentMeeting = null;
+            _dismissedMeeting = null;
         }
+    }
+
+    private MeetingInfo GetCurrentMeeting()
+    {
+        // Clear dismissed meeting if it's in the past
+        if ( _dismissedMeeting != null && _dismissedMeeting.StartTime.Add( _dismissedMeeting.Duration ) < DateTimeOffset.Now )
+        {
+            _dismissedMeeting = null;
+        }
+
+        // Check for currently active meeting
+        MeetingInfo currentMeeting = _calendarService.GetCurrentMeeting();
+
+        // If current meeting matches dismissed meeting, treat it as null
+        if ( (currentMeeting?.Subject, currentMeeting.StartTime)
+             == (_dismissedMeeting?.Subject, _dismissedMeeting?.StartTime) )
+        {
+            currentMeeting = null;
+        }
+
+        return currentMeeting;
     }
 
     private void UpdateBackgroundColors( List<Color> colors )
@@ -143,6 +194,11 @@ public class BackgroundColorModule : IWindowModule
         if ( _disposed )
         {
             return;
+        }
+
+        if ( _window != null )
+        {
+            _window.MouseDown -= OnWindowMouseDown;
         }
 
         Settings.Default.PropertyChanged -= OnSettingsChanged;
