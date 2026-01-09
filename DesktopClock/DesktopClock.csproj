@@ -15,13 +15,6 @@
         <Using Remove="System.Drawing" />
     </ItemGroup>
 
-  <PropertyGroup>
-    <Company>Daniel Chalmers</Company>
-    <Description>A digital clock for your desktop that's ready whenever you need it.</Description>
-    <Copyright>© Daniel Chalmers</Copyright>
-    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
-  </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="H.NotifyIcon.Wpf" Version="2.2.0" />
@@ -62,9 +55,5 @@
 
   <ItemGroup>
     <Resource Include="DesktopClock.ico" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Converters\" />
   </ItemGroup>
 </Project>
